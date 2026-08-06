@@ -148,7 +148,7 @@ Both paths share one tail (`_solvate_and_create`): register GAFF templates →
 ### Run — `omd run` (`dynamics.py`)
 
 `minimize → equilibrate (restraints on) → release restraints → production`, with
-platform probing and a hybrid-platform path for this Mac.
+platform probing and a hybrid equilibration/production path.
 
 1. Deserialize `system.xml`, read positions from the topology PDB.
 2. Add an NPT `MonteCarloBarostat` (1 atm, 300 K, every 25 steps) if `pressure > 0`
@@ -157,22 +157,20 @@ platform probing and a hybrid-platform path for this Mac.
    `CustomExternalForce` with a **global** `k` parameter (so it can be zeroed for
    production without rebuilding the system). **Auto-disable:** if there are no
    protein heavy atoms (a single-molecule system, or `restrain_protein=False`), no
-   restraint force is added and the hybrid path is skipped — so `run` works unchanged
-   on a protein-free system with the default config.
+   restraint force is added — so `run` works unchanged on a protein-free system with
+   the default config.
 4. **Platform probing** (`get_platform("auto")`): try OpenCL → CPU → Reference, each
    verified by actually creating a 1-particle context (a platform can be "available"
    yet fail on a real PME system). Precision is applied per-context, not as a default
    (setting an unsupported Precision default poisons the OpenCL singleton here).
-5. **Hybrid platform (this Mac).** Apple's deprecated OpenCL GPU device is
-   single-precision only, and single precision cannot stably run the *restrained*
-   minimize+equilibration of a large solvated PME system (L-BFGS sticks at a
-   catastrophic energy; the first restrained steps NaN). CPU (double) handles it, and
-   OpenCL single is stable for production once restraints are released. So when
-   restraints are on and the production platform is single-precision OpenCL, `run`
+5. **Hybrid equilibration/production.** When the chosen production platform cannot
+   stably run the *restrained* minimize+equilibration (e.g. a single-precision GPU
+   device where L-BFGS sticks and the first restrained steps NaN), `run`
    **equilibrates on CPU (double)**, then transfers the equilibrated state (positions,
-   velocities, periodic box) to a fresh **OpenCL** context and produces with `k=0`.
-   You'll see `equilibrating on CPU, producing on OpenCL` in the log. With no
-   restraints (single molecule), it runs one platform throughout.
+   velocities, periodic box) to a fresh production context and produces with `k=0`
+   (you'll see `equilibrating on CPU, producing on <platform>` in the log). With a
+   production platform that handles restraints, or with no restraints (single
+   molecule), it runs one platform throughout.
 6. **Minimize** to a **force tolerance** (`minimize_tolerance`, default 10 kJ/mol/nm),
    not a fixed iteration count — a solvated ~150k-particle system needs far more than
    ~1000 L-BFGS steps, and leftover water clashes blow up the first 2 fs dynamics
@@ -209,12 +207,11 @@ slice since Rg over the full box is meaningless); energy plot. Writes `rmsd.csv`
 
 ---
 
-## Environment setup (conda-forge via Miniforge)
+## Environment setup (conda-forge)
 
 The OpenFF/GAFF ligand tooling is **not cleanly installable from PyPI** (only yanked,
-broken-metadata uploads exist), so this project uses a conda-forge environment.
-Miniforge is installed at `~/miniforge3` with base auto-activation **off** (activate
-explicitly).
+broken-metadata uploads exist), so this project uses a conda-forge environment. Any
+conda-forge distribution works (Miniforge, Miniconda + the conda-forge channel, etc.).
 
 ```sh
 # one-time: create the env from environment.yml (installs all deps + this package)
@@ -233,34 +230,20 @@ keeps pip from touching them):
 pip install -e . --no-deps
 ```
 
-### Fixes you need on this Apple Silicon mac
+### Force-field note: ions live in the water file
 
-- **libomp is keg-only.** Homebrew installs `libomp` but it is NOT on the dyld default
-  path (`ctypes.util.find_library('omp')` returns `None`). Add to `~/.zshrc`:
-  ```sh
-  export DYLD_FALLBACK_LIBRARY_PATH="/opt/homebrew/opt/libomp/lib:/lib:/usr/lib${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
-  export OMP_NUM_THREADS=4
-  ```
-  This makes libomp *loadable by name*; only code built against `-fopenmp` gets a
-  speedup (most pip/conda wheels are not OMP-linked, so don't expect speedups unless
-  you compile something against OpenMP).
-- **No MPS/Metal platform.** OpenMM on Apple Silicon exposes `Reference`, `CPU`, and
-  `OpenCL` only. The OpenCL GPU device is **single-precision only** (`mixed`/`double`
-  fall back to CPU) — see the hybrid-platform note under *Run* above. This is why the
-  production run equilibrates on CPU and produces on OpenCL.
-- **No separate ion XML — ions live in the water file.** This conda `openmm` build
-  ships `amber14/protein.ff14SB.xml` and the water models, but **no `amber14/*-ions.xml`
-  files**. An earlier config tried to glob `amber14/*-ions.xml` for
-  `neutralize=True` + 0.15 M salt and hit
-  `ValueError: Could not locate file "amber14/*-ions.xml"`. The fix is **not** to fetch
-  anything: the ion templates (NA, CL, K, MG, CA, …) are **already inside
-  `amber14/tip3p.xml`** alongside HOH. So the build loads `protein.ff14SB.xml` +
-  `tip3p.xml` only, and `config.ion_ff = None`. Set `ion_ff` only if you switch to a
-  water model whose XML lacks ions (e.g. `amber14/opc.xml` for OPC) — and even then the
-  file ships with openmm, no download needed.
+This conda-forge `openmm` build ships `amber14/protein.ff14SB.xml` and the water models,
+but **no `amber14/*-ions.xml` files**. An earlier config tried to glob
+`amber14/*-ions.xml` for `neutralize=True` + 0.15 M salt and hit
+`ValueError: Could not locate file "amber14/*-ions.xml"`. The fix is **not** to fetch
+anything: the ion templates (NA, CL, K, MG, CA, …) are **already inside
+`amber14/tip3p.xml`** alongside HOH. So the build loads `protein.ff14SB.xml` +
+`tip3p.xml` only, and `config.ion_ff = None`. Set `ion_ff` only if you switch to a
+water model whose XML lacks ions (e.g. `amber14/opc.xml` for OPC) — and even then the
+file ships with openmm, no download needed.
 
 Disk: the conda env is ~1.5–2 GB (openmm + openff-toolkit + rdkit + mdtraj +
-scipy/matplotlib + their native libs). Miniforge base is ~500 MB.
+scipy/matplotlib + their native libs).
 
 ---
 
@@ -305,30 +288,14 @@ omd run --system workmol/system.xml --topology workmol/complex.pdb \
 omd analyze --traj workmol/traj.dcd --topology workmol/complex.pdb --out-dir workmol
 ```
 
-`run` auto-detects the protein-free system and disables restraints + the hybrid path,
-so the single-molecule path needs no special flags. **Box size for NPT:** a single
+`run` auto-detects the protein-free system and disables restraints, so the
+single-molecule path needs no special flags. **Box size for NPT:** a single
 small molecule in a tight box can NPT-crash with `The periodic box size has decreased
 to less than twice the nonbonded cutoff` — with `nonbonded_cutoff=1.0` nm the box must
 stay above 2.0 nm/side, and a ~230-water box (padding 1.0) is small enough that NPT
 pressure noise lets the barostat overshoot. At the **default `padding=1.5`** the box is
 ~3.2 nm and NPT is stable (settles to ~0.99 g/mL). Use the default padding for NPT
 single-molecule runs; only drop to padding 1.0 with `pressure<=0` (NVT) for tiny checks.
-
-### Long runs: launch fully detached
-
-Multi-hour background jobs on this laptop die ~30–50 min in if not **fully detached**
-from the Claude session. `nohup` alone is not enough (it only blocks SIGHUP, not the
-harness's reaped-task SIGTERM). Put `caffeinate -w $$ &` at the top of the run script
-(holds off macOS idle sleep) and launch it detached with a one-line
-`subprocess.Popen(..., start_new_session=True)` (macOS has no `setsid` binary; this
-calls `setsid()` in the child → new session, reparented to launchd):
-
-```sh
-~/miniforge3/bin/python -c "import subprocess; subprocess.Popen(['zsh','./run.sh'], stdout=open('out.log','ab'), stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, start_new_session=True, cwd='$(pwd)')"
-```
-
-Verify with `ps -ax -o pid,ppid,sess,command | grep run.sh` — expect PPID 1. Monitor by
-tailing the log / `energy.csv`; do not sleep-poll.
 
 ---
 
@@ -421,9 +388,9 @@ PAP cofactors and a crystal `LDP` = L-dopamine ligand) and `data/ligands/sult1a3
   (both copies) and waters were stripped.
 - **175,674 particles, 55,314 waters.**
 
-**Run** (`omd run --steps 500000`, 1.0 ns at 2 fs): hybrid path — equilibrated on CPU
-(double), produced on OpenCL (single). Wall-clock ~4h18m (08:24:57 → 12:43:12 BST).
-Stable throughout — no NaN in 1000 energy rows.
+**Run** (`omd run --steps 500000`, 1.0 ns at 2 fs): stable throughout — no NaN in
+1000 energy rows. Wall-clock ~4h18m on the test machine (CPU-equil / OpenCL-produce;
+see `LOCAL_NOTES.md` for the platform specifics).
 
 | metric | final value |
 |---|---|
@@ -560,7 +527,7 @@ openmm/
 │   ├── prepare_protein.py   #   PDBFixer pipeline
 │   ├── prepare_ligand.py    #   SMILES->conformers->MMFF->SDF, SDF passthrough, centroid placement
 │   ├── build_system.py      #   build_system (complex) + build_mol_system (single molecule)
-│   ├── dynamics.py          #   platform probing, hybrid CPU-equil/OpenCL-produce, minimize, reporters
+│   ├── dynamics.py          #   platform probing, hybrid equil/produce, minimize, reporters
 │   ├── analyze.py           #   mdtraj RMSD/RMSF/Rg + energy plots + wrapped trajectory
 │   └── cli.py               #   argparse entrypoint (omd)
 └── tests/

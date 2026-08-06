@@ -35,3 +35,6 @@ outputs/*
 # --- large inputs you may not want tracked ---
 data/**/*.pdb.bak
 data/**/*.ent
+
+# --- local machine-specific notes (not for the public repo) ---
+LOCAL_NOTES.md

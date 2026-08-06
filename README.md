@@ -354,22 +354,59 @@ After `build`/`run`/`analyze`, the output dir contains:
 `traj.dcd` is **unwrapped** — a solute that drifts across a periodic face appears split
 across opposite box walls (a dimer looks like it "separates", a ligand looks like it
 "flies out"). This is a **visualization artifact**, not real dynamics. `analyze` writes
-a wrapped/centered solute-only trajectory. Load that one:
+a wrapped, centered, **solute-only** trajectory (`traj_wrapped.xtc` + `traj_wrapped.pdb`).
+Load that pair — never the unwrapped `traj.dcd` against the full `complex.pdb`.
 
-```sh
-load outputs/traj_wrapped.pdb, complex   # topology (solute-only, matches the xtc)
-load outputs/traj_wrapped.xtc, complex
+### Quick start (SULT1A3 run)
+
+From the repo root, in PyMOL's command line (or a `.pml` script):
+
+```pymol
+# 1. load the solute-only topology, then the trajectory into the same object
+load outputs/prodtest/traj_wrapped.pdb, complex
+load outputs/prodtest/traj_wrapped.xtc, complex
+
+# 2. representations: protein cartoon, ligand + cofactors as sticks
+hide everything, all
+show cartoon, polymer
+color grey80, polymer
+show sticks, resn LIG           # docked ligand (stamped LIG by the build)
+color cyan, resn LIG
+show sticks, resn A3P            # PAP cofactors (one per monomer)
+color magenta, resn A3P
+show spheres, resn ZN and name ZN   # structural metal (zinc-finger run only)
+color orange, resn ZN
+
+# 3. play / scrub
+mplay                           # loop the trajectory
+mstop                           # stop
 ```
 
-Do **not** load `traj_wrapped.xtc` against the full `complex.pdb` (152k atoms incl.
-solvent) — a solute-only xtc needs the solute-only `traj_wrapped.pdb` topology or
-mdtraj/PyMOL reject the atom-count mismatch.
+### Tips
+
+- **Do not load `traj_wrapped.xtc` against the full `complex.pdb`** (152k atoms incl.
+  solvent) — a solute-only xtc needs the solute-only `traj_wrapped.pdb` topology or
+  mdtraj/PyMOL reject the atom-count mismatch. The `.pdb` and `.xtc` from `analyze` are a
+  matched pair; load them into the **same** object name (`complex` above).
+- **Residue names the build stamps:** **`LIG`** (docked ligand), the cofactor's PDB
+  resname (e.g. **`A3P`**), **`ZN`** (kept metal). Waters/ions are already stripped from
+  the wrapped trajectory. Use these in selections: `select lig, resn LIG`.
+- **Measure a distance over time** (e.g. Zn–thiolate in the zinc-finger run):
+  ```pymol
+  distance zn_sg, resn ZN and name ZN, resn CYM and name SG
+  ```
+  ~2.3 Å throughout confirms the metal stayed coordinated (the `test_zinc_finger_md`
+  assertion checks the same thing on the last frame).
+- **Export a movie:**
+  ```pymol
+  set ray_trace_frames, 0        # 1 = higher quality, much slower
+  mpng frames                    # writes frames/*.png; stitch with ffmpeg
+  ```
+- **Save the session** for later: `save outputs/prodtest/view.pse`.
 
 ---
 
 ## Example: SULT1A3 dimer + PAP + ligand (~1 ns production test)
-
-<!-- FILL: final 1 ns results are appended here once the production run completes. -->
 
 Inputs (kept in git): `data/protein/sult1a3_2A3R.pdb` (the dimer, with bound **A3P** =
 PAP cofactors and a crystal `LDP` = L-dopamine ligand) and `data/ligands/sult1a3_2A3R_c0.sdf`
@@ -384,12 +421,24 @@ PAP cofactors and a crystal `LDP` = L-dopamine ligand) and `data/ligands/sult1a3
   (both copies) and waters were stripped.
 - **175,674 particles, 55,314 waters.**
 
-**Run** (`omd run --steps 500000`, ~1 ns): hybrid path — equilibrated on CPU (double),
-produced on OpenCL (single). The production phase was confirmed stable over the
-partial run: **T ≈ 300 K, density ≈ 1.007 g/mL, total energy stable, no NaN.**
+**Run** (`omd run --steps 500000`, 1.0 ns at 2 fs): hybrid path — equilibrated on CPU
+(double), produced on OpenCL (single). Wall-clock ~4h18m (08:24:57 → 12:43:12 BST).
+Stable throughout — no NaN in 1000 energy rows.
 
-_(Final RMSD/RMSF/energy/density and the wrapped trajectory path will be filled in
-when the run completes and `omd analyze` finishes.)_
+| metric | final value |
+|---|---|
+| steps / time | 500,000 / 1000.0 ps (1.0 ns) |
+| final temperature | 300.53 K |
+| final density | 1.0082 g/mL |
+| protein CA RMSD (vs frame 0) | 0.364 nm |
+| ligand RMSD (vs frame 0, protein-aligned) | 0.273 nm |
+| total-energy NaN | none |
+
+**Analyze** wrote `analysis.png`, `rmsd.csv`, `rmsf.csv`, and the wrapped/centered
+solute-only viewing trajectory: **`outputs/prodtest/traj_wrapped.xtc`** (1000 frames,
+9420 solute atoms) + `traj_wrapped.pdb` topology. Load that pair in PyMOL/VMD (not the
+unwrapped `traj.dcd`, which shows the dimer split across periodic faces — a
+visualization artifact).
 
 ---
 

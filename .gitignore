@@ -1,0 +1,37 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg-link
+.eggs/
+build/
+dist/
+*.so
+
+# --- virtual envs ---
+.venv/
+venv/
+env/
+
+# --- generated outputs (keep the folder, ignore contents) ---
+outputs/*
+!outputs/.gitkeep
+
+# --- MD artifacts (in case they're written outside outputs/) ---
+*.dcd
+*.xtc
+*.nc
+*.chk
+*.csv
+!**/requirements.csv
+
+# --- editor / OS ---
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# --- large inputs you may not want tracked ---
+data/**/*.pdb.bak
+data/**/*.ent

@@ -1,0 +1,21 @@
+name: openmm-md
+# Conda-forge is the supported channel: OpenFF/GAFF ligand tooling is not
+# cleanly installable from PyPI (only yanked, broken-metadata uploads exist).
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - openmm
+  - openff-toolkit
+  - openmmforcefields
+  - rdkit
+  - pdbfixer
+  - mdtraj
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib
+  - pubchempy      # resolve cofactor SMILES from PDB HETNAM names (auto-cofactor discovery)
+  - pip
+  - pip:
+      - -e .          # install this package (console script `omd`) without pulling PyPI deps

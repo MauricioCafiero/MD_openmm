@@ -1,0 +1,24 @@
+[project]
+name = "openmm-md"
+version = "0.1.0"
+description = "OpenMM protein/ligand MD pipeline (AMBER ff14SB + GAFF2)"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+# Runtime deps are provided by the conda-forge env (see environment.yml), NOT by
+# pip -- installing the OpenFF/GAFF stack from PyPI pulls yanked, broken-metadata
+# packages. Keep this empty so `pip install -e .` only registers the `omd` script.
+dependencies = []
+
+[project.scripts]
+omd = "openmm_md.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/openmm_md"]
+
+# Reference list of what environment.yml installs (kept here for visibility):
+#   openmm, openff-toolkit, openmmforcefields, rdkit, pdbfixer, mdtraj,
+#   numpy, scipy, pandas, matplotlib

@@ -61,8 +61,10 @@ def analyze(traj_path: Path, topology: Path, out_dir: Path):
     # itself split across opposite box walls (a visualization artifact, not real
     # motion). image_molecules() reassembles whole molecules across the PBC; we
     # then keep only the solute (protein + docked ligand + cofactors, dropping
-    # water/ions) and center it for a fast, clean PyMOL/XTC view. Load the .xtc
-    # in PyMOL with `topology` (complex.pdb) as the topology.
+    # water/ions) and center it, and write a solute-only xtc + a matching
+    # first-frame pdb. Load the .xtc in PyMOL against that traj_wrapped.pdb
+    # (NOT the full complex.pdb -- a solute-only xtc needs the solute-only
+    # topology or PyMOL/mdtraj reject the atom-count mismatch).
     try:
         _write_wrapped(traj, out_dir)
     except Exception as e:  # wrapping is a convenience; never block analysis on it

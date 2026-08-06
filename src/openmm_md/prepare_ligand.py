@@ -40,12 +40,15 @@ def smiles_to_sdf(smiles: str, output_sdf: Path, num_confs: int = 5, seed: int =
     # where result == 0 means the optimization converged.
     results = AllChem.MMFFOptimizeMoleculeConfs(mol, numThreads=0, maxIters=500)
     energies = [e if (r == 0) else float("inf") for (r, e) in results]
-    best = cids[int(np.argmin(energies))]
-    best_energy = energies[best]
+    best_pos = int(np.argmin(energies))
+    best = cids[best_pos]            # conformer id (EmbedMultipleConfs ids need not be 0)
+    best_energy = energies[best_pos]
 
-    mol = Chem.Mol(mol, confId=best)  # keep only the chosen conformer
     Chem.SanitizeMol(mol)
-    Chem.MolToMolFile(mol, str(output_sdf), confId=0, kekulize=True)
+    # write the chosen conformer by its actual id -- Chem.Mol(mol, confId=best)
+    # keeps the conformer at id `best` (it is NOT renumbered to 0), so writing
+    # confId=0 would raise "Bad Conformer Id" whenever best != 0.
+    Chem.MolToMolFile(mol, str(output_sdf), confId=best, kekulize=True)
     print(f"[prep-ligand] SMILES -> {output_sdf} (conf {best}, "
           f"MMFF energy = {best_energy:.3f} kcal/mol)")
     return output_sdf, best_energy

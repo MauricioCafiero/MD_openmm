@@ -80,6 +80,12 @@ def main(argv=None):
     p.add_argument("--out-dir", type=Path, default=Path("outputs"))
     p.add_argument("--steps", type=int, default=Config().production_steps)
     p.add_argument("--platform", default=Config().platform)
+    p.add_argument("--pressure", type=float, default=Config().pressure,
+                   help="pressure in atm (NPT); set <= 0 for NVT. Default 1.0.")
+    p.add_argument("--ramp-end", type=float, default=None,
+                   help="linearly ramp the thermostat temperature from the base "
+                        "temperature to this value (K) over the production steps "
+                        "(heating / annealing). Default: constant temperature.")
 
     p = sub.add_parser("analyze", help="RMSD/RMSF + energy plots")
     p.add_argument("--traj", type=Path, required=True)
@@ -150,6 +156,9 @@ def main(argv=None):
 
     elif args.cmd == "run":
         cfg.platform = args.platform
+        cfg.pressure = args.pressure
+        if args.ramp_end is not None:
+            cfg.temperature_ramp_end = args.ramp_end
         run_dynamics(args.system, args.topology, args.out_dir, cfg=cfg, steps=args.steps)
 
     elif args.cmd == "analyze":

@@ -62,6 +62,12 @@ class Config:
 
     # --- Dynamics ---
     temperature: float = 300.0  # K
+    # Linear temperature ramp over the *production* phase (simulated heating /
+    # annealing): if set, the Langevin thermostat (and barostat, if NPT) target is
+    # ramped from `temperature` to `temperature_ramp_end` across the production
+    # steps. None = constant `temperature` throughout. Equilibration always runs
+    # at the base `temperature`.
+    temperature_ramp_end: float | None = None
     pressure: float = 1.0  # atm (NPT); set <= 0 to disable barostat (NVT)
     barostat_interval: int = 25  # steps between volume moves (MonteCarloBarostat)
     friction: float = 1.0  # 1/ps

@@ -213,8 +213,29 @@ def run(
     prod_sim.reporters.append(app.DCDReporter(str(out_dir / "traj.dcd"), cfg.traj_interval))
     prod_sim.reporters.append(app.CheckpointReporter(str(out_dir / "checkpoint.chk"), cfg.checkpoint_interval))
 
-    print(f"[run] production {steps} steps (restraints off) on {prod_name} ...")
-    prod_sim.step(steps)
+    ramp_end = cfg.temperature_ramp_end
+    if ramp_end is not None and abs(ramp_end - cfg.temperature) > 1e-6:
+        # Linear temperature ramp on the thermostat (and barostat, if NPT) from
+        # cfg.temperature -> ramp_end across the production steps. Step in
+        # report_interval increments so each energy.csv row reflects the current
+        # setpoint; the Langevin thermostat drags the velocities along smoothly.
+        barostats = [f for f in system.getForces()
+                     if f.__class__.__name__ == "MonteCarloBarostat"]
+        print(f"[run] production {steps} steps on {prod_name}: temperature ramp "
+              f"{cfg.temperature} -> {ramp_end} K ...")
+        done = 0
+        while done < steps:
+            frac = done / steps if steps else 0.0
+            T = cfg.temperature + (ramp_end - cfg.temperature) * frac
+            prod_sim.integrator.setTemperature(T * unit.kelvin)
+            for b in barostats:
+                b.setDefaultTemperature(T * unit.kelvin)
+            n = min(cfg.report_interval, steps - done)
+            prod_sim.step(n)
+            done += n
+    else:
+        print(f"[run] production {steps} steps (restraints off) on {prod_name} ...")
+        prod_sim.step(steps)
 
     state = prod_sim.context.getState(getPositions=True)
     with open(out_dir / "final.pdb", "w") as f:

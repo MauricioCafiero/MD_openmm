@@ -180,7 +180,13 @@ platform probing and a hybrid equilibration/production path.
 8. Production: zero `k`, attach reporters — `StateDataReporter` (energy.csv, every
    `report_interval`), `DCReporter` (traj.dcd, every `traj_interval`),
    `CheckpointReporter` (checkpoint.chk, every `checkpoint_interval`). Run `steps`
-   (default 5,000,000 = 10 ns at 2 fs).
+   (default 5,000,000 = 10 ns at 2 fs). **Optional temperature ramp** (`--ramp-end`,
+   `config.temperature_ramp_end`): if set, the Langevin thermostat (and barostat, if
+   NPT) target is linearly ramped from the base `temperature` to `temperature_ramp_end`
+   across the production steps — simulated heating/annealing. Implemented by stepping in
+   `report_interval` increments and updating the integrator temperature each increment,
+   so each energy.csv row reflects the current setpoint (the `Temperature` column
+   tracks the ramp). Equilibration always runs at the base `temperature`.
 9. Write `final.pdb`. Returns the traj path.
 
 ### Analyze — `omd analyze` (`analyze.py`)
@@ -273,6 +279,9 @@ omd build --protein outputs/protein_prep.pdb --ligand outputs/ligand.sdf \
 # 4. run MD (positions read from the topology PDB; --steps in MD steps)
 omd run --system work/system.xml --topology work/complex.pdb \
         --steps 5000000 --out-dir work
+#    flags: --pressure 0  (NVT; default 1.0 atm NPT)
+#           --ramp-end 400  (linearly ramp the thermostat 300 -> 400 K over the run)
+#           --platform auto|OpenCL|CPU|Reference
 
 # 5. analyze (RMSD/RMSF/energy plots + wrapped viewing trajectory)
 omd analyze --traj work/traj.dcd --topology work/complex.pdb --out-dir work
@@ -283,8 +292,9 @@ omd analyze --traj work/traj.dcd --topology work/complex.pdb --out-dir work
 ```sh
 omd build-mol --smiles "c1ccccc1O" --out-dir workmol --padding 1.5     # from SMILES
 # or: omd build-mol --ligand data/ligands/pose.sdf --out-dir workmol   # pre-made SDF
+# NVT single-molecule run (no barostat) with a 300 -> 400 K temperature ramp:
 omd run --system workmol/system.xml --topology workmol/complex.pdb \
-        --steps 5000000 --out-dir workmol
+        --steps 5000000 --pressure 0 --ramp-end 400 --out-dir workmol
 omd analyze --traj workmol/traj.dcd --topology workmol/complex.pdb --out-dir workmol
 ```
 
@@ -475,6 +485,41 @@ crystal:
 The Zn²⁺ stays in its Cys2His2 site (all four distances 2.05–2.49 Å throughout) — the
 bonded model holds the metal through dynamics, no drift, no NaN. This is the
 `test_zinc_finger_md` smoke test (always on; artifacts in `outputs/smoke_znmd/`).
+
+---
+
+## Example: single-molecule temperature ramp (m-coumaric acid, 300 → 400 K)
+
+A single small molecule run with a **linear temperature ramp during production**
+(`--ramp-end`), NVT (`--pressure 0`). The molecule is **m-coumaric acid**
+(`C1=CC(=CC(=C1)O)/C=C/C(=O)O`, the first row of `anna_top_15.csv`) — built from SMILES,
+solvated alone, then ramped from 300 K to 400 K over the production steps to sample
+conformations / test high-T stability. Equilibration runs at the base 300 K; the ramp
+applies to production only.
+
+```sh
+omd build-mol --smiles "C1=CC(=CC(=C1)O)/C=C/C(=O)O" --out-dir outputs/coumaric --padding 1.5
+omd run --system outputs/coumaric/system.xml --topology outputs/coumaric/complex.pdb \
+        --steps 500000 --pressure 0 --ramp-end 400 --platform CPU --out-dir outputs/coumaric
+omd analyze --traj outputs/coumaric/traj.dcd --topology outputs/coumaric/complex.pdb --out-dir outputs/coumaric
+```
+
+**System:** 2604 particles (860 waters, 20-atom solute). **Run:** 5000-step equilibration
+(300 K) + 500k-step production (300 → 400 K ramp, 1.0 ns), CPU, ~31 min wall-clock.
+
+| metric | value |
+|---|---|
+| production steps / time | 500,000 / 1.0 ns |
+| temperature (measured) | 301.0 K → 345.9 K (mid) → 388.6 K (last) — tracks the 300 → 400 K ramp |
+| total-energy NaN | none (1000 rows) |
+| solute RMSD (vs frame 0) | 0.022 nm |
+| solute radius of gyration | 0.319 nm |
+
+The `Temperature` column in `energy.csv` trends upward with the ramp setpoint (the
+Langevin thermostat drags the kinetic temperature along; it fluctuates around and
+slightly lags the linear setpoint). The molecule stays compact and stable (RMSD
+0.022 nm, Rg 0.319 nm) — no instability at the high-T end. Wrapped viewing trajectory:
+`outputs/coumaric/traj_wrapped.xtc` (+ `traj_wrapped.pdb`, 1000 frames, 20 solute atoms).
 
 ---
 

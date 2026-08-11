@@ -211,6 +211,22 @@ solute (mass-weighted, a compactness/conformational proxy — computed on a solu
 slice since Rg over the full box is meaningless); energy plot. Writes `rmsd.csv`
 (`solute_rmsd_nm`, `solute_rg_nm`), `rmsf.csv`, `analysis.png`.
 
+### MM/GBSA — `omd mmgbsa` (`mmgbsa.py`)
+
+Post-run binding free energy on a production trajectory via AmberTools MMPBSA.py
+(GBn2, `igb=8`; PB is a planned follow-up, a `&pb` block). Builds a solute-only Amber
+prmtop in the trajectory's atom order (ParmEd route, **not** tleap — preserves the
+production His tautomers and atom order; LIG + cofactors re-added from OpenFF for
+correct bond orders; `constraints=None` + mbondi2 radii so GBn2 doesn't divide by
+zero), splits receptor/ligand prmtops (`-rp`/`-lp` for binding mode so the masks aren't
+silently ignored), converts the trajectory to netcdf, and runs MMPBSA.py. **Prep is
+CPU-light** (safe to run during a live MD job); the per-frame evaluation is
+**CPU-heavy, gated behind `--run`**. Env-activation (PATH/AMBERHOME when launched by
+absolute path), the openff 0.18 `AmberToolsToolkitWrapper` auto-registration drop, and
+the MMPBSA `-rp`/`-lp` binding-mode gotcha are all handled in `mmgbsa.py` (see its
+module docstring). Worked result on the SULT1A3 prodtest run: **ΔG_bind = −28.4 ± 4.0
+kcal/mol** (1000 frames) — see the SULT1A3 example below for the command + breakdown.
+
 ---
 
 ## Environment setup (conda-forge)
@@ -417,6 +433,39 @@ solute-only viewing trajectory: **`outputs/prodtest/traj_wrapped.xtc`** (1000 fr
 unwrapped `traj.dcd`, which shows the dimer split across periodic faces — a
 visualization artifact).
 
+**MM/GBSA** (binding free energy on the production trajectory, via `omd mmgbsa`):
+prep builds a solute-only Amber prmtop in the trajectory's atom order (ParmEd route —
+not tleap — so the production His tautomers and atom order are preserved; LIG +
+cofactors re-added from OpenFF for correct bond orders; `constraints=None` and
+mbondi2 radii so GBn2 doesn't divide by zero), splits receptor/ligand prmtops
+(`-rp`/`-lp` for binding mode so the masks aren't silently ignored), and converts the
+trajectory to netcdf. Prep is CPU-light and safe to run during a live MD job; the
+per-frame GB evaluation is CPU-heavy and gated behind `--run`.
+
+```sh
+omd mmgbsa \
+  --protein  data/protein/sult1a3_2A3R.pdb \
+  --ligand   data/ligands/sult1a3_2A3R_c0.sdf \
+  --traj     outputs/prodtest/traj_wrapped.xtc \
+  --topology outputs/prodtest/traj_wrapped.pdb \
+  --out-dir  outputs/prodtest/mmgbsa --run
+```
+
+On the 1 ns prodtest trajectory (1000 frames, GBn2 / igb=8, single-trajectory;
+~58 min wall-clock):
+
+| term | value (kcal/mol) |
+|---|---|
+| **ΔG_bind** | **−28.4 ± 4.0** (stderr 0.13) |
+| ΔG_gas | −56.0 ± 8.3 |
+| ΔG_solv | +27.7 ± 5.3 |
+
+Net-favorable binding — the gas-phase electrostatic/vdW term (−56) dominates, partly
+offset by the +28 desolvation penalty. Result lands in
+`outputs/prodtest/mmgbsa/FINAL_RESULTS_MMPBSA.dat`. PB is a planned follow-up (a `&pb`
+block); the env-activation + ParmEd + MMPBSA binding-mode gotchas are handled in
+`src/openmm_md/mmgbsa.py` (see its module docstring).
+
 ---
 
 ## Cofactor robustness
@@ -571,9 +620,10 @@ openmm/
 │   ├── config.py            #   all tunable parameters (one dataclass)
 │   ├── prepare_protein.py   #   PDBFixer pipeline
 │   ├── prepare_ligand.py    #   SMILES->conformers->MMFF->SDF, SDF passthrough, centroid placement
-│   ├── build_system.py      #   build_system (complex) + build_mol_system (single molecule)
+│   ├── build_system.py      #   build_system (complex) + build_mol_system (single) + build_multimol_system (N fragments)
 │   ├── dynamics.py          #   platform probing, hybrid equil/produce, minimize, reporters
 │   ├── analyze.py           #   mdtraj RMSD/RMSF/Rg + energy plots + wrapped trajectory
+│   ├── mmgbsa.py            #   MM/GBSA binding energy (ParmEd prmtop + MMPBSA.py)
 │   └── cli.py               #   argparse entrypoint (omd)
 └── tests/
     └── smoke.py             # ligand+platform+single-molecule always; full pipeline with OMD_* env vars

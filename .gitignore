@@ -32,6 +32,7 @@ rotaxanes/*.sdf
 rotaxanes/metad/plumed.dat
 rotaxanes/metad/HILLS
 rotaxanes/metad/COLVAR
+rotaxanes/metad/*.log
 
 # --- MM/GBSA scratch (antechamber + MMPBSA.py write these to cwd) ---
 ANTECHAMBER_*.AC*

@@ -48,7 +48,14 @@ python -c "from openmmplumed import PlumedForce; print('plumed plugin ok')"
 ## Run
 
 ```sh
-# 1. (re)build the topology -> plumed.dat (run once after omd build-multimol)
+# 0. build the rotaxane topology (only needed once, or when switching rot)
+#    rot1.txt / rot2htpuma.txt carry the rod:/wheel: SMILES; the *_displaced_pinu.xyz
+#    in rotaxanes/ carries the threaded starting coords (coords only, no bonds).
+python ../build_rotaxane.py --smiles ../rot1.txt --from-xyz ../rot1_displaced_pinu.xyz \
+    --out ../outputs/complex.sdf
+omd build-multimol --sdf ../outputs/complex.sdf --out-dir ../outputs   # -> complex.pdb + system.xml
+
+# 1. (re)build the bias -> plumed.dat (run once after omd build-multimol)
 python make_plumed.py --topology ../outputs/complex.pdb --out plumed.dat
 
 # 2. launch the WT-METAD run detached (it is a multi-hour job)

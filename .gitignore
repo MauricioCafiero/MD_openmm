@@ -25,6 +25,24 @@ outputs/*
 *.csv
 !**/requirements.csv
 
+# --- rotaxane generated artifacts (regenerate from rotaxanes/*.py) ---
+rotaxanes/outputs/
+rotaxanes/metad/metad_run/
+rotaxanes/*.sdf
+rotaxanes/metad/plumed.dat
+rotaxanes/metad/HILLS
+rotaxanes/metad/COLVAR
+
+# --- MM/GBSA scratch (antechamber + MMPBSA.py write these to cwd) ---
+ANTECHAMBER_*.AC*
+ATOMTYPE.INF
+sqm.in
+sqm.out
+sqm.pdb
+reference.frc
+leap.log
+_MMPBSA_*
+
 # --- editor / OS ---
 .DS_Store
 .idea/

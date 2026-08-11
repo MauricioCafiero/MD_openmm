@@ -628,3 +628,79 @@ def build_mol_system(
         modeller, [lig_offmol], cfg, [cfg.water_ff],
         add_hydrogens=False, out_dir=out_dir, ligand_smiles=lig_offmol.to_smiles(),
     )
+
+
+def _load_multimol_sdf(sdf: Path) -> list[Chem.Mol]:
+    """Read every fragment of a multi-mol SDF into a clean RDKit Mol (explicit H).
+
+    Mirrors ``load_ligand_rdkit``'s MDL-valence fix (OpenBabel / some exporters
+    set NoImplicit while omitting the explicit H -> RDKit perceives radicals ->
+    OpenFF rejects): read unsanitized, clear NoImplicit so implicit H is
+    recomputed from bond orders, then sanitize. Each fragment's 3D pose is kept.
+    """
+    suppl = Chem.SDMolSupplier(str(sdf), removeHs=False, sanitize=False)
+    mols = []
+    for mol in suppl:
+        if mol is None:
+            raise ValueError(f"could not read a fragment from SDF: {sdf}")
+        for a in mol.GetAtoms():
+            a.SetNoImplicit(False)
+        mol.UpdatePropertyCache(strict=False)
+        Chem.SanitizeMol(mol)
+        mols.append(mol)
+    if not mols:
+        raise ValueError(f"no fragments in SDF: {sdf}")
+    return mols
+
+
+def build_multimol_system(
+    multimol_sdf: Path,
+    out_dir: Path,
+    cfg: Config | None = None,
+    residue_names: list[str] | None = None,
+):
+    """Solvate N covalently-separate small molecules (no protein) in TIP3P + ions.
+
+    Each SDF fragment gets its own GAFF2 template + its own residue name. The
+    fragments are non-bonded to each other -- the intended use is a rotaxane
+    (rod + wheel, mechanically interlocked but not covalently bonded): the bulky
+    rod stoppers keep the wheel threaded, so the mechanical bond needs no
+    explicit force term. Like ``build_mol_system``, no protein force field is
+    loaded; the solutes are typed entirely by the GAFFTemplateGenerator and
+    water/ions come from the water FF. Each fragment's SDF carries explicit H,
+    so ``addHydrogens`` is skipped.
+
+    ``residue_names`` defaults to ``["ROD", "WHL"]`` for two fragments (a
+    rotaxane), else ``["FRG0", "FRG1", ...]``. Names must not collide with a
+    protein residue (they are kept out of the protein selection by mdtraj).
+    """
+    cfg = cfg or Config()
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    mols = _load_multimol_sdf(multimol_sdf)
+    if residue_names is None:
+        residue_names = (["ROD", "WHL"] if len(mols) == 2
+                         else [f"FRG{i}" for i in range(len(mols))])
+    if len(residue_names) != len(mols):
+        raise ValueError(f"{len(mols)} fragments but {len(residue_names)} residue names")
+
+    offmols, adds = [], []  # adds: (topology, positions) per fragment
+    for mol, name in zip(mols, residue_names):
+        mol = Chem.AddHs(mol, addCoords=True)  # no-op if SDF already explicit-H; safe
+        offmol, top, pos = _explicit_h_rdmol_to_openmm(mol, residue_name=name)
+        offmols.append(offmol)
+        adds.append((top, pos))
+        print(f"[build-multimol] {name}: {offmol.to_smiles()[:60]} ({offmol.n_atoms} atoms) -> GAFF2")
+
+    # Combine fragment topologies into one Modeller; addSolvent defines the box.
+    modeller = app.Modeller(adds[0][0], adds[0][1])
+    for top, pos in adds[1:]:
+        modeller.add(top, pos)
+    print(f"[build-multimol] {len(offmols)} fragments, "
+          f"{sum(o.n_atoms for o in offmols)} solute atoms -> GAFF2, "
+          f"solvating with {cfg.water_model}")
+    return _solvate_and_create(
+        modeller, offmols, cfg, [cfg.water_ff],
+        add_hydrogens=False, out_dir=out_dir, ligand_smiles=None,
+    )

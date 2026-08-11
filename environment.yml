@@ -6,6 +6,11 @@ channels:
 dependencies:
   - python=3.11
   - openmm
+  - openmm-plumed  # WT-METAD via PLUMED (rotaxanes/metad/); pulls the `plumed` CLI.
+                   # NOTE: the conda-forge py311 build pins openmm to 8.4, so this
+                   # downgrades openmm 8.5 -> 8.4. That is the working state on the
+                   # dev machine (metad + MM/GBSA + protein MD all run on 8.4); the
+                   # pipeline API is stable across the 8.4/8.5 bump.
   - openff-toolkit
   - openmmforcefields
   - rdkit

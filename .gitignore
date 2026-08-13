@@ -34,6 +34,11 @@ rotaxanes/metad/HILLS
 rotaxanes/metad/COLVAR
 rotaxanes/metad/*.log
 
+# --- QM rescoring generated artifacts (regenerate from rotaxanes/qm_rescoring/*.py) ---
+rotaxanes/qm_rescoring/frames/
+rotaxanes/qm_rescoring/*.png
+rotaxanes/qm_rescoring/*.log
+
 # --- MM/GBSA scratch (antechamber + MMPBSA.py write these to cwd) ---
 ANTECHAMBER_*.AC*
 ATOMTYPE.INF

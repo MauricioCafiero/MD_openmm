@@ -2,8 +2,18 @@
 
 ## Why
 
-The rot1 WT-MetaD run (`../metad/`, 10M steps, corrected `station_barrier()`
-metric) found a solution-phase free-energy surface with wells at:
+**Note:** the table below is the 10M-step snapshot this plan was originally
+written against. The MetaD run was subsequently extended a third time (+5M,
+15M steps total) and the barrier settled higher (~14.2 kcal/mol, see
+`../metad/README.md`'s run record) with a bigger well-depth gap (5.1 kcal/mol
+vs the 2.0 below) — the qualitative "terminal wells favored over central"
+finding is unchanged, but if re-running any of this folder's scripts, pull
+fresh target `d` values from the current `Fes.dat` rather than reusing the
+numbers here verbatim.
+
+The rot1 WT-MetaD run (`../metad/`, 10M steps at the time, corrected
+`station_barrier()` metric) found a solution-phase free-energy surface with
+wells at:
 
 | d (Å) | role | F above min (kcal/mol) |
 |------:|------|---:|
@@ -24,9 +34,11 @@ has four analogous stations, but with the **opposite relative depth**:
 
 i.e. in gas phase the *central* wells are deepest and the *stopper* wells are
 ~6 kcal above; in our explicit-solvent MD the *stopper*-region wells are
-deepest and the *central* wells sit ~7-8 kcal above — solvent appears to
-**flip which pair of stations is thermodynamically favored**, not just shift
-numbers around. That's the headline result worth verifying before trusting it.
+deepest and the *central* wells sit ~7-8 kcal above (at the 10M-step
+snapshot; the gap grew further by 15M) — solvent appears to **flip which pair
+of stations is thermodynamically favored**, not just shift numbers around.
+That's the headline result worth verifying before trusting it, and it's
+gotten more pronounced with more sampling, not less.
 
 Caveat: their `d` is a rigid-body wheel-translation scan coordinate; ours is a
 dynamic wheel-O-centroid-projected-on-N···N-axis PLUMED CV. The topology match

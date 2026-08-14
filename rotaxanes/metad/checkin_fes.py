@@ -81,20 +81,25 @@ def analyze(fes_path: Path, obs_min: float, obs_max: float):
                    key=lambda w: w[1])[:4]
 
     if len(wells) < 2:
-        return float(kcal.max()), wells  # only one well found; no saddle to bound yet
+        return float(kcal.max()), None, wells  # only one well found; no saddle to bound yet
 
     # station A = global minimum; station B = lowest-energy well on the
     # opposite side of A (the "other" shuttle station, not a shoulder of A's
-    # own well) -- barrier is the max F strictly between them.
+    # own well) -- barrier is the max F strictly between them. `gap` = the
+    # well-depth difference between the two stations -- for a symmetric rod,
+    # this MUST converge to 0; a nonzero (or growing) gap is a sampling
+    # artifact (one side's bias getting ahead of the other's), not real
+    # asymmetry. See ../qm_rescoring conversation / README run record.
     a_cv, a_k = wells[0]
     opposite = [w for w in wells if (w[0] > 0) != (a_cv > 0)]
     if not opposite:
-        return float(kcal.max()), wells  # no opposite-side well yet; can't bound a saddle
+        return float(kcal.max()), None, wells  # no opposite-side well yet; can't bound a saddle
     b_cv, b_k = min(opposite, key=lambda w: w[1])
     lo, hi = sorted((a_cv, b_cv))
     win = (cv_m >= lo) & (cv_m <= hi)
     barrier = float(kcal[win].max() - min(a_k, b_k)) if win.any() else float(kcal.max())
-    return barrier, wells
+    gap = abs(a_k - b_k)
+    return barrier, gap, wells
 
 
 def main():
@@ -136,9 +141,10 @@ def main():
         if r is None:
             print(f"  {label}: n/a")
             continue
-        barrier, wells = r
+        barrier, gap, wells = r
+        gap_str = f"{gap:5.2f}" if gap is not None else "  n/a"
         wells_str = ", ".join(f"{c:+.2f}A({k:.1f}kcal)" for c, k in wells) or "none found"
-        print(f"  {label:12s}: barrier={barrier:5.2f} kcal/mol   wells: {wells_str}")
+        print(f"  {label:12s}: barrier={barrier:5.2f} kcal/mol   well-gap={gap_str} kcal/mol   wells: {wells_str}")
 
 
 if __name__ == "__main__":

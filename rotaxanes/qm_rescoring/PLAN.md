@@ -160,7 +160,7 @@ would need its own subprocess/venv, same as their `bench_uma_tblite.py
 --driver` pattern). If ever added, it'd get its own separate `.venv` for the
 same reason tblite gets one here.
 
-## Status (as of the rot1 10M-step MetaD result)
+## Status (as of the rot1 20M-step, converged MetaD result)
 
 Env is ready and everything below has actually been run at least once. Summary
 of what worked, what didn't, and what's queued next:
@@ -186,43 +186,61 @@ of what worked, what didn't, and what's queued next:
    Each point was still one MD snapshot's post-relax energy, so
    snapshot-to-snapshot conformational noise (ring pucker, rotamer state)
    dominates over the underlying trend at that resolution.
-4. **Frame averaging** (the fix for #3) — implemented, **not yet run**:
-   `extract_stations.py --n-frames 4 --min-gap 500` now pulls several MD
-   frames per target `d`, spread across the trajectory (>=500 frames / 1 ns
-   apart, so they sample different excursions rather than correlated
-   adjacent steps -- verified 84-260 candidate frames available within
-   ±0.15 Å per bin, comfortably enough to pick decorrelated ones).
-   `relax_and_score.py` now groups output files by target `d`
-   (`d{target}_r{rep}.xyz` naming) and reports the mean + std across
-   replicates, so residual noise is visible rather than hidden.
-   `plot_comparison.py` updated to plot the mean with error bars.
+4. **Frame averaging + dense scan — RUN, against the converged 20M-step MD
+   result.** `extract_stations.py --auto-grid --n-frames 4` (default
+   `--min-gap 500`) pulled 205 frames: 52 targets, most with 4 decorrelated
+   MD replicates each (one sparse-region target only got 1 -- too few
+   candidates within the window there). Launched detached via
+   `run_dense_scan.sh` + `systemd-inhibit` (same pattern as the MD runs; full
+   scope, ~2.6h estimated) and finished in ~1h55m (52 min faster than
+   estimated). `relax_and_score.py` grouped replicates by target `d` and
+   reported mean + std; `plot_comparison.py` plotted the mean with error bars
+   against `Fes.dat` (`qm_vs_md.png`, sent to the user).
 
-   **Deferred, not run**: full scope (0.5 Å × 4 frames ≈ 204 points) would
-   take **~2.6 hours** (measured: 51 single-frame points took 38.7 min,
-   ~45s/point). Same auto-suspend risk as the MD runs applies (CPU-busy ≠
-   "not idle" for this machine's 1h timeout) — would need the same detached +
-   `systemd-inhibit` launch pattern, not just `run_in_background`. Presented
-   scope options (full/coarser-grid/fewer-replicates) via AskUserQuestion;
-   user deferred ("let the computer cool down" / prioritized the next MetaD
-   extension instead) rather than picking one. **Next session: ask again
-   before launching** — don't assume which scope, and don't launch
-   unattended without the inhibitor.
+   **Result: averaging fixed the point-to-point noise.** Std devs across
+   replicates are ~1-5 kcal/mol (real, visible residual noise) instead of the
+   >40 kcal/mol adjacent-point swings the single-frame dense scan showed. The
+   qualitative picture holds: low points cluster near both terminal regions
+   (e.g. d=-11.00 at 0.0, d=+12.00 at 1.83, d=+9.50 at 4.26 kcal/mol) with the
+   middle broadly higher (~8-15 kcal/mol) and bumpy -- consistent with the
+   MD's own bumpy central plateau (rot1_shuttles.md's "central plateau of
+   soft-mode rattling" description), not a clean two-well curve.
 
-5. **Vibrational free-energy correction** (original plan's step 3) — not
-   started. Once a frame-averaged, low-noise electronic curve exists, the
-   natural next move is `ase.vibrations.Vibrations` + `FixAtoms` (same one
-   rod atom + one wheel unit already used for the loose relax -- consistent
-   with what `vib_stations.py`'s "constrained partial Hessian avoids the
-   reaction-coordinate imaginary mode" logic needs) + `HarmonicThermo`, to
-   add ZPE/entropy on top of the electronic energy at whichever stations end
-   up mattering most (the two terminal wells + the barrier region).
+   **Gotcha hit:** `run_dense_scan.sh` didn't set `PYTHONUNBUFFERED=1`
+   (unlike the MD launch scripts, which do), so Python block-buffered stdout
+   when redirected to a file -- the log showed 0 lines for the first ~30 min
+   despite the process genuinely computing (279% CPU, confirmed via `ps`).
+   Worked around by estimating progress from wall-clock/CPU time instead of
+   log line count for that run; fixed the script for next time (added the
+   env var, matching the MD scripts' convention) -- doesn't retroactively fix
+   the run that already happened, but the next one will log live.
 
-### Commands (once resumed)
+5. **Eyring/TST rates** (`../metad/eyring.py`, new) — applied
+   `k = (kB*T/h)*exp(-DeltaG/RT)` to the MD barriers at each stage and to the
+   gas-phase pipeline's reference values, validated against
+   `rot1_shuttles.md`'s own published numbers (matches within rounding). The
+   converged 20M-step barrier (12.59 kcal/mol) implies tau ~ 237.5 us --
+   between the gas-phase Shuttle A (central saddle, 1.36 us) and Shuttle B
+   (stopper saddle, 3.85 ms) timescales, and ~24x slower than rot2's
+   converged tau (9.97 us).
+
+6. **Vibrational free-energy correction** (original plan's step 3) — not
+   started. Now that a frame-averaged, lower-noise electronic curve exists,
+   the natural next move is `ase.vibrations.Vibrations` + `FixAtoms` (same
+   one rod atom + one wheel unit already used for the loose relax --
+   consistent with what `vib_stations.py`'s "constrained partial Hessian
+   avoids the reaction-coordinate imaginary mode" logic needs) +
+   `HarmonicThermo`, to add ZPE/entropy on top of the electronic energy at
+   whichever stations end up mattering most (the two terminal wells + the
+   barrier region).
+
+### Commands (already run once against the 20M-step result; re-run if the MD changes again)
 
 ```sh
 cd rotaxanes/qm_rescoring
-rm -f frames/*.xyz                            # clear the old single-frame extraction
+rm -f frames/*.xyz                            # clear any prior extraction
 .venv/bin/python extract_stations.py --auto-grid --n-frames 4   # or a coarser scope
-.venv/bin/python relax_and_score.py --solvent water > relax_dense.log
-.venv/bin/python plot_comparison.py            # -> qm_vs_md.png, now with error bars
+./run_dense_scan.sh                            # detached + systemd-inhibit, ~2h
+.venv/bin/python plot_comparison.py            # -> qm_vs_md.png, mean + error bars
+python ../metad/eyring.py <barrier_kcal>       # rate/timescale for any barrier
 ```

@@ -218,19 +218,20 @@ load_traj metad_run/pymol_rotaxane.dcd
 
 ---
 
-## Run record — Aug 2026 (15M-step rot1 shuttle, Linux/CPU)
+## Run record — Aug 2026 (20M-step rot1 shuttle, Linux/CPU)
 
 WT-METAD run on `rot1` (rod + 24-crown-8 wheel, 144 solute atoms + 2504
 waters, padding 1.2 nm, box 43.29 Å). Run on a Linux machine with no GPU (only
 `Reference`/`CPU` OpenMM platforms exist here) — CPU throughput measured at
 15 ms/step, so the full 25M-step protocol used for rot2htpuma (~104 h) was
 scaled down to a 5M-step (10 ns) first look (~21 h) per the README's own
-"first look" recommendation, then extended twice more (+5M, +5M; warm restart
-via `run_metad_resume.py`, PLUMED `RESTART`) as the barrier estimate kept
-moving between legs — 15M steps (30 ns) total, three legs, each ~21 h. All
-three launched detached via `run_metad_linux.sh` / `run_resume_linux.sh`
-(Linux ports of `run_metad.sh`/`run_resume.sh`: `systemd-inhibit` in place of
-`caffeinate`, since this machine suspends after 1 h idle even on AC power).
+"first look" recommendation, then extended three more times (+5M each; warm
+restart via `run_metad_resume.py`, PLUMED `RESTART`) as the barrier estimate
+kept moving between legs — 20M steps (40 ns) total, four legs, each ~21 h,
+getting close to rot2htpuma's 25M-step protocol. All four launched detached
+via `run_metad_linux.sh` / `run_resume_linux.sh` (Linux ports of
+`run_metad.sh`/`run_resume.sh`: `systemd-inhibit` in place of `caffeinate`,
+since this machine suspends after 1 h idle even on AC power).
 
 ### Process & commands
 
@@ -250,10 +251,11 @@ python make_plumed.py --topology ../../outputs/complex.pdb --out plumed.dat
 # leg 2: extend +5M steps (warm restart, PLUMED RESTART appends HILLS/COLVAR):
 ./run_resume_linux.sh 5000000    # -> metad_run/{traj_resume.dcd, energy_resume.csv}
 
-# leg 3: extend +5M more (auto-detects leg 2 as the latest, restarts from ITS
-# endpoint, writes traj_resume2.dcd/energy_resume2.csv -- see the multi-leg
-# chaining gotcha below):
+# legs 3-4: extend +5M more each time (auto-detects the latest leg, restarts
+# from ITS endpoint, writes traj_resumeN.dcd/energy_resumeN.csv -- see the
+# multi-leg chaining gotcha below):
 ./run_resume_linux.sh 5000000    # -> metad_run/{traj_resume2.dcd, energy_resume2.csv}
+./run_resume_linux.sh 5000000    # -> metad_run/{traj_resume3.dcd, energy_resume3.csv}
 
 # regenerate deliverables (joins traj.dcd + every traj_resume*.dcd leg, in order):
 python analyze_metad.py --topology ../../outputs/complex.pdb --plumed plumed.dat \
@@ -264,37 +266,55 @@ python analyze_metad.py --topology ../../outputs/complex.pdb --plumed plumed.dat
 
 | quantity | value |
 |---|---|
-| shuttle barrier ΔF‡ | **≈14.2 kcal/mol** (`station_barrier()`: max F strictly between the two station wells, not the whole sampled range) |
-| terminal wells | **d ≈ −11.20 Å** (deepest well) and **d ≈ +11.20 Å** (other station, 5.1 kcal/mol above the first) |
-| intermediate features | shallower shoulders around d ≈ −4.55 and +4.72 Å, ~11 kcal/mol above the minimum |
-| CV range sampled | d = −14.31 … +14.06 Å |
-| convergence check | all-hills barrier held exactly flat (14.21 kcal/mol) for the last 4 of 24 hourly checks in leg 3 |
+| shuttle barrier ΔF‡ | **≈12.6 kcal/mol** (`station_barrier()`: max F strictly between the two station wells, not the whole sampled range) |
+| terminal wells | **d ≈ +11.20 Å** (deepest well) and **d ≈ −11.20 Å** (other station, 0.6 kcal/mol above the first) |
+| intermediate features | shallower shoulders around d ≈ −1.6 and +6.65 Å, ~9-10 kcal/mol above the minimum |
+| CV range sampled | d = −14.31 … +14.18 Å |
+| convergence check | all-hills barrier *and* well-depth gap both held exactly flat (12.59 / 0.63 kcal/mol) for the last 10 of 21 hourly checks in leg 4 |
 
-Settled noticeably higher than the 10M-step snapshot (9.2 kcal/mol) after a
-third extension — the barrier climbed steadily through most of leg 3
-(9.25 → 15.44 kcal/mol over ~18 hours) before plateauing in the last few
-hours at 14.2. This is the same "still filling, not yet converged" pattern
-leg 1 showed at a smaller scale, just slower this time: the well-depth gap
-between the two terminal wells also grew across the leg (2.0 → 5.1 kcal/mol)
-as the bias kept refining. Lands close to rot2htpuma's 10.7 kcal/mol and in
-the same range as the gas-phase pipeline's stopper-to-stopper "Shuttle B"
-estimate (14.25 kcal/mol, `rot1_shuttles.md` in the Rotaxanes repo) — worth
-noting given that number was gas-phase-only and this is explicit solvent;
-matching that closely is either a coincidence or a sign the barrier really is
-in this ballpark regardless of solvation, which the QM rescoring work
-(`../qm_rescoring/`) is set up to help distinguish.
+The barrier eased down from the 15M-step snapshot (14.2 kcal/mol) as leg 4
+progressed, settling at 12.6. More importantly: **the well-depth gap between
+the two terminal wells — which should converge to exactly 0 for this
+symmetric rod — shrank from 5.1 kcal/mol (start of leg 4) to 0.6 kcal/mol**,
+the closest to degenerate this run has gotten, confirming the leg 1→3 growth
+in that gap (2.0 → 5.1 kcal/mol) was sampling artifact (one side's bias
+temporarily getting ahead of the other's under WT-MetaD tempering), not real
+asymmetry — as expected, since the rod is chemically symmetric end-to-end.
+`checkin_fes.py` now reports this gap at every check-in specifically to catch
+this (see the gotcha below). Still close to rot2htpuma's 10.7 kcal/mol and to
+the gas-phase pipeline's stopper-to-stopper "Shuttle B" estimate
+(14.25 kcal/mol, `rot1_shuttles.md` in the Rotaxanes repo) despite this being
+explicit solvent — the QM rescoring work (`../qm_rescoring/`) is set up to
+help figure out whether that's coincidence.
 
 ### Where to find the deliverables (all in `metad_run/`, gitignored)
 
 Same file layout as the rot2htpuma record above (`Fes.dat`, `Fes_plot.png`,
 `pymol_rotaxane.{pdb,dcd}`, `HILLS`, `COLVAR`, `traj.dcd` + `traj_resume.dcd`
-+ `traj_resume2.dcd`, `energy.csv` + `energy_resume.csv` +
-`energy_resume2.csv`). `pymol_rotaxane.dcd` here is 15,000 frames (all three
-legs joined), wheel–rod distance 0.11–13.68 Å, frame jump max 2.57 Å (no
-teleports) — using the bond-graph unwrap fix described in the gotchas below.
++ `traj_resume2.dcd` + `traj_resume3.dcd`, `energy.csv` +
+`energy_resume.csv` + `energy_resume2.csv` + `energy_resume3.csv`).
+`pymol_rotaxane.dcd` here is 20,000 frames (all four legs joined),
+wheel–rod distance 0.07–13.68 Å, frame jump max 2.57 Å (no teleports) — using
+the bond-graph unwrap fix described in the gotchas below.
 
 ### Gotchas specific to this run
 
+- **A flat barrier alone isn't proof of convergence — for a symmetric rod,
+  watch the well-depth gap trend toward 0.** rot1's rod is chemically
+  symmetric end-to-end, so the two terminal wells MUST become degenerate
+  given enough sampling; any nonzero gap is sampling artifact (one side's
+  WT-MetaD bias getting ahead of the other's under tempering — an
+  already-flatter region gets smaller new hills, so whichever side was
+  visited/flattened earlier keeps "leading" until the other catches up), not
+  real chemistry. The barrier plateaued more than once in this run (26.5
+  kcal/mol for 3 checks in leg 1, then resumed climbing; 9.16 for 6 checks in
+  leg 3, then climbed to 15.4) while the gap kept growing underneath —a
+  reminder that a temporarily-flat barrier isn't sufficient evidence on its
+  own. `checkin_fes.py` now reports this gap (`station_barrier()`'s two
+  station wells' energy difference) at every check-in for exactly this
+  reason. It finally shrank from 5.1 to 0.6 kcal/mol over leg 4, alongside a
+  genuinely flat barrier — that combination is a much stronger convergence
+  signal than either alone.
 - **`run_metad_resume.py` always restarted from `traj.dcd`, even on a 3rd+
   leg.** It only ever read `traj.dcd`'s last frame for the warm restart and
   always wrote to the fixed names `traj_resume.dcd`/`energy_resume.csv` —

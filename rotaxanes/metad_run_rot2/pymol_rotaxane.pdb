@@ -1,0 +1,233 @@
+REMARK   1 CREATED WITH MDTraj 1.11.1, 2026-08-11
+CRYST1   31.672   31.672   31.672  90.00  90.00  90.00 P 1           1 
+ATOM      1  O1x ROD X   0      -3.541   1.900  -2.318  1.00  0.00           O  
+ATOM      2  C1x ROD X   0      -3.290   1.423  -1.212  1.00  0.00           C  
+ATOM      3  C2x ROD X   0      -1.978   1.649  -0.424  1.00  0.00           C  
+ATOM      4  C3x ROD X   0      -1.333   0.591   0.281  1.00  0.00           C  
+ATOM      5  F1x ROD X   0      -1.948  -0.592   0.337  1.00  0.00           F  
+ATOM      6  C4x ROD X   0      -0.151   0.807   0.932  1.00  0.00           C  
+ATOM      7  C5x ROD X   0      -1.339   2.877  -0.450  1.00  0.00           C  
+ATOM      8  C6x ROD X   0      -0.106   3.090   0.187  1.00  0.00           C  
+ATOM      9  F2x ROD X   0       0.537   4.255  -0.045  1.00  0.00           F  
+ATOM     10  C7x ROD X   0       0.541   2.044   0.861  1.00  0.00           C  
+ATOM     11  C8x ROD X   0       1.894   2.103   1.487  1.00  0.00           C  
+ATOM     12  N1x ROD X   0       2.765   3.115   1.155  1.00  0.00           N  
+ATOM     13  C9x ROD X   0       4.097   3.158   1.751  1.00  0.00           C  
+ATOM     14 C10x ROD X   0       5.048   2.154   1.084  1.00  0.00           C  
+ATOM     15 C11x ROD X   0       5.790   2.569  -0.071  1.00  0.00           C  
+ATOM     16 C12x ROD X   0       6.669   1.649  -0.712  1.00  0.00           C  
+ATOM     17 C13x ROD X   0       7.561   2.160  -1.826  1.00  0.00           C  
+ATOM     18  F3x ROD X   0       7.944   1.223  -2.766  1.00  0.00           F  
+ATOM     19  F4x ROD X   0       8.730   2.639  -1.363  1.00  0.00           F  
+ATOM     20  F5x ROD X   0       6.976   3.115  -2.526  1.00  0.00           F  
+ATOM     21 C14x ROD X   0       6.903   0.356  -0.216  1.00  0.00           C  
+ATOM     22 C15x ROD X   0       6.202  -0.030   0.950  1.00  0.00           C  
+ATOM     23 C16x ROD X   0       6.423  -1.454   1.558  1.00  0.00           C  
+ATOM     24  F6x ROD X   0       7.720  -1.952   1.343  1.00  0.00           F  
+ATOM     25  F7x ROD X   0       6.326  -1.313   2.845  1.00  0.00           F  
+ATOM     26  F8x ROD X   0       5.502  -2.413   1.282  1.00  0.00           F  
+ATOM     27 C17x ROD X   0       5.243   0.875   1.577  1.00  0.00           C  
+ATOM     28  O2x ROD X   0       2.172   1.241   2.353  1.00  0.00           O  
+ATOM     29  N2x ROD X   0      -4.253   0.676  -0.608  1.00  0.00           N  
+ATOM     30 C18x ROD X   0      -5.551   0.219  -1.199  1.00  0.00           C  
+ATOM     31 C19x ROD X   0      -5.587  -1.287  -1.033  1.00  0.00           C  
+ATOM     32 C20x ROD X   0      -6.187  -1.792   0.127  1.00  0.00           C  
+ATOM     33 C21x ROD X   0      -6.153  -3.133   0.457  1.00  0.00           C  
+ATOM     34 C22x ROD X   0      -6.870  -3.645   1.799  1.00  0.00           C  
+ATOM     35  F9x ROD X   0      -6.834  -4.982   1.995  1.00  0.00           F  
+ATOM     36 F10x ROD X   0      -8.153  -3.223   1.833  1.00  0.00           F  
+ATOM     37 F11x ROD X   0      -6.248  -3.162   2.866  1.00  0.00           F  
+ATOM     38 C23x ROD X   0      -5.580  -4.031  -0.495  1.00  0.00           C  
+ATOM     39 C24x ROD X   0      -4.899  -3.590  -1.646  1.00  0.00           C  
+ATOM     40 C25x ROD X   0      -4.047  -4.474  -2.442  1.00  0.00           C  
+ATOM     41 F12x ROD X   0      -4.227  -4.406  -3.772  1.00  0.00           F  
+ATOM     42 F13x ROD X   0      -2.734  -4.226  -2.166  1.00  0.00           F  
+ATOM     43 F14x ROD X   0      -4.258  -5.744  -2.116  1.00  0.00           F  
+ATOM     44 C26x ROD X   0      -4.915  -2.193  -1.852  1.00  0.00           C  
+ATOM     45  H1x ROD X   0       0.282  -0.018   1.490  1.00  0.00           H  
+ATOM     46  H2x ROD X   0      -1.772   3.675  -1.045  1.00  0.00           H  
+ATOM     47  H3x ROD X   0       2.436   3.949   0.683  1.00  0.00           H  
+ATOM     48  H4x ROD X   0       4.609   4.124   1.656  1.00  0.00           H  
+ATOM     49  H5x ROD X   0       4.023   2.863   2.805  1.00  0.00           H  
+ATOM     50  H6x ROD X   0       5.762   3.596  -0.422  1.00  0.00           H  
+ATOM     51  H7x ROD X   0       7.566  -0.364  -0.685  1.00  0.00           H  
+ATOM     52  H8x ROD X   0       4.775   0.587   2.514  1.00  0.00           H  
+ATOM     53  H9x ROD X   0      -3.999   0.272   0.285  1.00  0.00           H  
+ATOM     54 H10x ROD X   0      -5.573   0.370  -2.285  1.00  0.00           H  
+ATOM     55 H11x ROD X   0      -6.447   0.594  -0.689  1.00  0.00           H  
+ATOM     56 H12x ROD X   0      -6.536  -1.023   0.811  1.00  0.00           H  
+ATOM     57 H13x ROD X   0      -5.643  -5.085  -0.240  1.00  0.00           H  
+ATOM     58 H14x ROD X   0      -4.343  -1.781  -2.679  1.00  0.00           H  
+TER      59      ROD X   0
+ATOM     60  O1x WHL X   0      -0.899   3.369   4.533  1.00  0.00           O  
+ATOM     61  C1x WHL X   0       0.475   3.784   4.143  1.00  0.00           C  
+ATOM     62  C2x WHL X   0       0.435   4.950   3.105  1.00  0.00           C  
+ATOM     63  O2x WHL X   0       1.783   5.529   3.051  1.00  0.00           O  
+ATOM     64  C3x WHL X   0       1.852   6.700   2.148  1.00  0.00           C  
+ATOM     65  C4x WHL X   0       3.223   6.670   1.415  1.00  0.00           C  
+ATOM     66  O3x WHL X   0       3.127   5.806   0.230  1.00  0.00           O  
+ATOM     67  C5x WHL X   0       2.907   6.360  -1.082  1.00  0.00           C  
+ATOM     68  C6x WHL X   0       2.732   5.219  -2.061  1.00  0.00           C  
+ATOM     69  O4x WHL X   0       3.783   4.273  -1.907  1.00  0.00           O  
+ATOM     70  C7x WHL X   0       3.715   3.176  -2.923  1.00  0.00           C  
+ATOM     71  C8x WHL X   0       2.722   2.062  -2.443  1.00  0.00           C  
+ATOM     72  O5x WHL X   0       3.252   0.695  -2.677  1.00  0.00           O  
+ATOM     73  C9x WHL X   0       2.532  -0.328  -1.977  1.00  0.00           C  
+ATOM     74 C10x WHL X   0       3.173  -0.662  -0.654  1.00  0.00           C  
+ATOM     75  O6x WHL X   0       3.027  -2.038  -0.357  1.00  0.00           O  
+ATOM     76 C11x WHL X   0       1.884  -2.404   0.379  1.00  0.00           C  
+ATOM     77 C12x WHL X   0       2.237  -2.207   1.825  1.00  0.00           C  
+ATOM     78  O7x WHL X   0       1.014  -2.043   2.630  1.00  0.00           O  
+ATOM     79 C13x WHL X   0       1.128  -1.648   4.036  1.00  0.00           C  
+ATOM     80 C14x WHL X   0      -0.278  -1.402   4.554  1.00  0.00           C  
+ATOM     81  O8x WHL X   0      -0.849  -0.219   4.042  1.00  0.00           O  
+ATOM     82 C15x WHL X   0      -0.686   0.909   4.870  1.00  0.00           C  
+ATOM     83 C16x WHL X   0      -1.297   2.065   4.083  1.00  0.00           C  
+ATOM     84  H1x WHL X   0       0.925   2.902   3.670  1.00  0.00           H  
+ATOM     85  H2x WHL X   0       0.901   4.108   5.100  1.00  0.00           H  
+ATOM     86  H3x WHL X   0      -0.024   4.665   2.150  1.00  0.00           H  
+ATOM     87  H4x WHL X   0      -0.163   5.720   3.609  1.00  0.00           H  
+ATOM     88  H5x WHL X   0       1.043   6.670   1.407  1.00  0.00           H  
+ATOM     89  H6x WHL X   0       1.869   7.672   2.655  1.00  0.00           H  
+ATOM     90  H7x WHL X   0       3.588   7.664   1.130  1.00  0.00           H  
+ATOM     91  H8x WHL X   0       4.033   6.401   2.105  1.00  0.00           H  
+ATOM     92  H9x WHL X   0       3.844   6.875  -1.330  1.00  0.00           H  
+ATOM     93 H10x WHL X   0       2.100   7.092  -1.208  1.00  0.00           H  
+ATOM     94 H11x WHL X   0       2.842   5.657  -3.061  1.00  0.00           H  
+ATOM     95 H12x WHL X   0       1.734   4.770  -2.142  1.00  0.00           H  
+ATOM     96 H13x WHL X   0       3.335   3.417  -3.924  1.00  0.00           H  
+ATOM     97 H14x WHL X   0       4.686   2.691  -3.080  1.00  0.00           H  
+ATOM     98 H15x WHL X   0       2.541   2.162  -1.366  1.00  0.00           H  
+ATOM     99 H16x WHL X   0       1.776   2.168  -2.989  1.00  0.00           H  
+ATOM    100 H17x WHL X   0       2.642  -1.263  -2.541  1.00  0.00           H  
+ATOM    101 H18x WHL X   0       1.447  -0.169  -1.997  1.00  0.00           H  
+ATOM    102 H19x WHL X   0       4.240  -0.469  -0.821  1.00  0.00           H  
+ATOM    103 H20x WHL X   0       2.680  -0.029   0.093  1.00  0.00           H  
+ATOM    104 H21x WHL X   0       1.628  -3.448   0.157  1.00  0.00           H  
+ATOM    105 H22x WHL X   0       1.001  -1.811   0.112  1.00  0.00           H  
+ATOM    106 H23x WHL X   0       2.853  -3.033   2.203  1.00  0.00           H  
+ATOM    107 H24x WHL X   0       2.866  -1.309   1.845  1.00  0.00           H  
+ATOM    108 H25x WHL X   0       1.626  -2.409   4.650  1.00  0.00           H  
+ATOM    109 H26x WHL X   0       1.692  -0.710   4.096  1.00  0.00           H  
+ATOM    110 H27x WHL X   0      -0.219  -1.302   5.644  1.00  0.00           H  
+ATOM    111 H28x WHL X   0      -0.909  -2.284   4.392  1.00  0.00           H  
+ATOM    112 H29x WHL X   0       0.401   0.991   4.994  1.00  0.00           H  
+ATOM    113 H30x WHL X   0      -1.159   0.779   5.851  1.00  0.00           H  
+ATOM    114 H31x WHL X   0      -2.388   2.015   4.188  1.00  0.00           H  
+ATOM    115 H32x WHL X   0      -1.096   1.955   3.011  1.00  0.00           H  
+TER     116      WHL X   0
+CONECT    1    2
+CONECT    2    1    3   29
+CONECT    3    2    4    7
+CONECT    4    3    5    6
+CONECT    5    4
+CONECT    6    4   10   45
+CONECT    7    3    8   46
+CONECT    8    7    9   10
+CONECT    9    8
+CONECT   10    6    8   11
+CONECT   11   10   12   28
+CONECT   12   11   13   47
+CONECT   13   12   14   48   49
+CONECT   14   13   15   27
+CONECT   15   14   16   50
+CONECT   16   15   17   21
+CONECT   17   16   18   19   20
+CONECT   18   17
+CONECT   19   17
+CONECT   20   17
+CONECT   21   16   22   51
+CONECT   22   21   23   27
+CONECT   23   22   24   25   26
+CONECT   24   23
+CONECT   25   23
+CONECT   26   23
+CONECT   27   14   22   52
+CONECT   28   11
+CONECT   29    2   30   53
+CONECT   30   29   31   54   55
+CONECT   31   30   32   44
+CONECT   32   31   33   56
+CONECT   33   32   34   38
+CONECT   34   33   35   36   37
+CONECT   35   34
+CONECT   36   34
+CONECT   37   34
+CONECT   38   33   39   57
+CONECT   39   38   40   44
+CONECT   40   39   41   42   43
+CONECT   41   40
+CONECT   42   40
+CONECT   43   40
+CONECT   44   31   39   58
+CONECT   45    6
+CONECT   46    7
+CONECT   47   12
+CONECT   48   13
+CONECT   49   13
+CONECT   50   15
+CONECT   51   21
+CONECT   52   27
+CONECT   53   29
+CONECT   54   30
+CONECT   55   30
+CONECT   56   32
+CONECT   57   38
+CONECT   58   44
+CONECT   60   61   83
+CONECT   61   60   62   84   85
+CONECT   62   61   63   86   87
+CONECT   63   62   64
+CONECT   64   63   65   88   89
+CONECT   65   64   66   90   91
+CONECT   66   65   67
+CONECT   67   66   68   92   93
+CONECT   68   67   69   94   95
+CONECT   69   68   70
+CONECT   70   69   71   96   97
+CONECT   71   70   72   98   99
+CONECT   72   71   73
+CONECT   73   72   74  100  101
+CONECT   74   73   75  102  103
+CONECT   75   74   76
+CONECT   76   75   77  104  105
+CONECT   77   76   78  106  107
+CONECT   78   77   79
+CONECT   79   78   80  108  109
+CONECT   80   79   81  110  111
+CONECT   81   80   82
+CONECT   82   81   83  112  113
+CONECT   83   60   82  114  115
+CONECT   84   61
+CONECT   85   61
+CONECT   86   62
+CONECT   87   62
+CONECT   88   64
+CONECT   89   64
+CONECT   90   65
+CONECT   91   65
+CONECT   92   67
+CONECT   93   67
+CONECT   94   68
+CONECT   95   68
+CONECT   96   70
+CONECT   97   70
+CONECT   98   71
+CONECT   99   71
+CONECT  100   73
+CONECT  101   73
+CONECT  102   74
+CONECT  103   74
+CONECT  104   76
+CONECT  105   76
+CONECT  106   77
+CONECT  107   77
+CONECT  108   79
+CONECT  109   79
+CONECT  110   80
+CONECT  111   80
+CONECT  112   82
+CONECT  113   82
+CONECT  114   83
+CONECT  115   83
+END

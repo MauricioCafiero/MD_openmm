@@ -266,36 +266,46 @@ python analyze_metad.py --topology ../../outputs/complex.pdb --plumed plumed.dat
 
 | quantity | value |
 |---|---|
-| shuttle barrier ΔF‡ | **≈12.6 kcal/mol** (`station_barrier()`: max F strictly between the two station wells, not the whole sampled range) |
-| terminal wells | **d ≈ +11.20 Å** (deepest well) and **d ≈ −11.20 Å** (other station, 0.6 kcal/mol above the first) |
-| intermediate features | shallower shoulders around d ≈ −1.6 and +6.65 Å, ~9-10 kcal/mol above the minimum |
+| shuttle barrier ΔF‡ | **≈8.5 kcal/mol** (`station_barrier()`: max F strictly between the two station wells, not the whole sampled range) |
+| terminal wells | **d ≈ +11.20 Å** (deepest well) and **d ≈ −11.20 Å** (other station, 0.68 kcal/mol above the first) |
+| intermediate features | shallower shoulders around d ≈ −4.38 and +4.55 Å, ~6 kcal/mol above the minimum |
 | CV range sampled | d = −14.31 … +14.18 Å |
-| convergence check | all-hills barrier *and* well-depth gap both held exactly flat (12.59 / 0.63 kcal/mol) for the last 10 of 21 hourly checks in leg 4 |
+| convergence check | well-depth gap held at 0.6036–0.6037 kcal/mol (full precision, see gotcha below) for 8 of 9 hourly checks in leg 5, then ticked up to 0.6801 in the final ~800 hills; well identity (+11.20 Å deepest) never flipped during leg 5 |
 
-The barrier eased down from the 15M-step snapshot (14.2 kcal/mol) as leg 4
-progressed, settling at 12.6. More importantly: **the well-depth gap between
-the two terminal wells — which should converge to exactly 0 for this
-symmetric rod — shrank from 5.1 kcal/mol (start of leg 4) to 0.6 kcal/mol**,
-the closest to degenerate this run has gotten, confirming the leg 1→3 growth
-in that gap (2.0 → 5.1 kcal/mol) was sampling artifact (one side's bias
-temporarily getting ahead of the other's under WT-MetaD tempering), not real
-asymmetry — as expected, since the rod is chemically symmetric end-to-end.
-`checkin_fes.py` now reports this gap at every check-in specifically to catch
-this (see the gotcha below). Still close to rot2htpuma's 10.7 kcal/mol and to
-the gas-phase pipeline's stopper-to-stopper "Shuttle B" estimate
-(14.25 kcal/mol, `rot1_shuttles.md` in the Rotaxanes repo) despite this being
-explicit solvent — the QM rescoring work (`../qm_rescoring/`) is set up to
-help figure out whether that's coincidence.
+25M steps total now (5 legs), matching rot2htpuma's step count. The barrier
+kept easing down through leg 5 (12.6 -> 8.5 kcal/mol) the same way it did
+through leg 4, while the well-depth gap — which should converge to exactly 0
+for this symmetric rod — held essentially flat at 0.60 kcal/mol for most of
+the leg before a small uptick to 0.68 in the closing stretch. Whether that
+final tick is genuine sampling noise or the start of another slow drift (this
+run has a track record of both barrier and gap plateauing for many checks
+before moving again — see the gotcha below) isn't resolvable from this leg
+alone. Independently cross-checked the symmetry assumption itself against a
+real MD frame: the rod's bond graph is exactly topologically symmetric
+(BFS-shell element composition matches perfectly N1-side vs N2-side, all 26
+shells), and the actual 3D geometry only deviates by ~0.26 Å mean (max
+1.15 Å, localized entirely to the CF3 stopper rotamers) between
+topologically-paired atoms in a single snapshot — so the gap-to-0 target is
+chemically sound, the remaining question is purely sampling convergence.
+Still in the same range as rot2htpuma's 10.7 kcal/mol and the gas-phase
+pipeline's stopper-to-stopper "Shuttle B" estimate (14.25 kcal/mol,
+`rot1_shuttles.md` in the Rotaxanes repo) despite this being explicit solvent
+— the QM rescoring work (`../qm_rescoring/`) is set up to help figure out
+whether that's coincidence.
 
 ### Where to find the deliverables (all in `metad_run/`, gitignored)
 
 Same file layout as the rot2htpuma record above (`Fes.dat`, `Fes_plot.png`,
 `pymol_rotaxane.{pdb,dcd}`, `HILLS`, `COLVAR`, `traj.dcd` + `traj_resume.dcd`
-+ `traj_resume2.dcd` + `traj_resume3.dcd`, `energy.csv` +
-`energy_resume.csv` + `energy_resume2.csv` + `energy_resume3.csv`).
-`pymol_rotaxane.dcd` here is 20,000 frames (all four legs joined),
++ `traj_resume2.dcd` + `traj_resume3.dcd` + `traj_resume4.dcd`, `energy.csv` +
+`energy_resume.csv` + `energy_resume2.csv` + `energy_resume3.csv` +
+`energy_resume4.csv`).
+`pymol_rotaxane.dcd` here is 25,000 frames (all five legs joined),
 wheel–rod distance 0.07–13.68 Å, frame jump max 2.57 Å (no teleports) — using
-the bond-graph unwrap fix described in the gotchas below.
+the bond-graph unwrap fix described in the gotchas below. A 20M-step (4-leg)
+snapshot of this data was pushed to `main` at `rotaxanes/metad_run_rot1/` for
+cross-machine PyMOL access and has since been updated with this 25M-step
+final version.
 
 ### Gotchas specific to this run
 
@@ -315,6 +325,19 @@ the bond-graph unwrap fix described in the gotchas below.
   reason. It finally shrank from 5.1 to 0.6 kcal/mol over leg 4, alongside a
   genuinely flat barrier — that combination is a much stronger convergence
   signal than either alone.
+- **`checkin_fes.py`'s well energies were rounded to 2dp *before* the gap
+  subtraction, not just in the printed display.** `find_wells()` built each
+  well as `(round(cv,2), round(kcal,2))`, so `gap = abs(a_k - b_k)` was
+  computed from already-rounded inputs -- a "flat 0.63 kcal/mol for 9 hours"
+  in leg 5 turned out to be partly this artifact (two numbers landing on the
+  same rounded value can look frozen while the true underlying value keeps
+  moving inside that rounding window). Fixed by deduping wells on rounded cv
+  (so the same physical well from adjacent grid points isn't double-counted)
+  while keeping full-precision kcal for the actual gap/barrier arithmetic.
+  Same pattern exists in `analyze_metad.py`'s `find_wells()` (used for the
+  final barrier, not gap, so the impact there is <0.01 kcal/mol) -- not fixed
+  there since it doesn't compute gap and the effect is negligible for a
+  2-decimal barrier report.
 - **`run_metad_resume.py` always restarted from `traj.dcd`, even on a 3rd+
   leg.** It only ever read `traj.dcd`'s last frame for the warm restart and
   always wrote to the fixed names `traj_resume.dcd`/`energy_resume.csv` —

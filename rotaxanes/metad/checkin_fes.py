@@ -77,8 +77,19 @@ def analyze(fes_path: Path, obs_min: float, obs_max: float):
     smooth = np.convolve(kcal, np.ones(k) / k, mode="same") if k >= 3 else kcal
     order = max(3, len(smooth) // 40)
     idx = argrelextrema(smooth, np.less_equal, order=order)[0]
-    wells = sorted({(round(float(cv_m[i]), 2), round(float(kcal[i]), 2)) for i in idx},
-                   key=lambda w: w[1])[:4]
+    # dedupe by rounded cv (so the same physical well isn't listed twice from
+    # adjacent grid points) but keep full-precision kcal for the actual gap
+    # computation below -- rounding kcal here to 2dp before the a_k - b_k
+    # subtraction was silently destroying the precision needed to tell real
+    # drift apart from display rounding (caught when a "flat for 9 hours"
+    # gap turned out to be an artifact of this, not genuine stability).
+    seen_cv: dict[float, float] = {}
+    for i in idx:
+        c = round(float(cv_m[i]), 2)
+        k = float(kcal[i])
+        if c not in seen_cv or k < seen_cv[c]:
+            seen_cv[c] = k
+    wells = sorted(seen_cv.items(), key=lambda w: w[1])[:4]
 
     if len(wells) < 2:
         return float(kcal.max()), None, wells  # only one well found; no saddle to bound yet
@@ -142,9 +153,9 @@ def main():
             print(f"  {label}: n/a")
             continue
         barrier, gap, wells = r
-        gap_str = f"{gap:5.2f}" if gap is not None else "  n/a"
-        wells_str = ", ".join(f"{c:+.2f}A({k:.1f}kcal)" for c, k in wells) or "none found"
-        print(f"  {label:12s}: barrier={barrier:5.2f} kcal/mol   well-gap={gap_str} kcal/mol   wells: {wells_str}")
+        gap_str = f"{gap:7.4f}" if gap is not None else "   n/a"
+        wells_str = ", ".join(f"{c:+.2f}A({k:.2f}kcal)" for c, k in wells) or "none found"
+        print(f"  {label:12s}: barrier={barrier:7.4f} kcal/mol   well-gap={gap_str} kcal/mol   wells: {wells_str}")
 
 
 if __name__ == "__main__":

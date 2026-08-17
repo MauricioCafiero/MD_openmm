@@ -1,4 +1,4 @@
-REMARK   1 CREATED WITH MDTraj 1.11.1, 2026-08-15
+REMARK   1 CREATED WITH MDTraj 1.11.1, 2026-08-17
 CRYST1   42.643   42.643   42.643  90.00  90.00  90.00 P 1           1 
 ATOM      1  O1x ROD X   0       9.125  -0.516  -2.526  1.00  0.00           O  
 ATOM      2  C1x ROD X   0       8.845   0.300  -1.681  1.00  0.00           C  

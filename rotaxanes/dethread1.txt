@@ -1,0 +1,2 @@
+rod: O=C(NCc1cc(C(F)(F)F)cc(C(F)(F)F)c1)c1ccc(C(=O)Oc2c(F)c(F)c(F)c(F)c2F)cc1
+wheel: c1ccc2c(c1)OCCOCCOCCOc1ccccc1OCCOCCOCCO2

@@ -25,14 +25,10 @@ outputs/*
 *.csv
 !**/requirements.csv
 
-# --- rotaxane generated artifacts (regenerate from rotaxanes/*.py) ---
-rotaxanes/outputs/
-rotaxanes/metad/metad_run/
-rotaxanes/*.sdf
-rotaxanes/metad/plumed.dat
-rotaxanes/metad/HILLS
-rotaxanes/metad/COLVAR
-rotaxanes/metad/*.log
+# --- rotaxane work: subdivided into its own private repo for safekeeping
+# (github.com/MauricioCafiero/rotaxanes-results, 2026-08-22) -- this repo
+# stays general, the whole tree lives there instead. ---
+rotaxanes/
 
 # --- QM rescoring generated artifacts (regenerate from rotaxanes/qm_rescoring/*.py) ---
 rotaxanes/qm_rescoring/frames/

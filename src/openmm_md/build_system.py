@@ -485,6 +485,7 @@ def _solvate_and_create(
         ff,
         model=cfg.water_model,
         padding=cfg.padding * unit.nanometer,
+        boxShape=cfg.box_shape,
         ionicStrength=cfg.ionic_strength * unit.molar,
         neutralize=cfg.neutralize,
     )

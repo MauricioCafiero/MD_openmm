@@ -22,6 +22,15 @@ class Config:
     # DCD shows it split across faces (a visualization artifact, not real motion).
     # >=1.5 nm keeps the solute clear of the walls for typical systems.
     padding: float = 1.5  # nm around solute
+    # Periodic box shape, passed straight to Modeller.addSolvent. "cube" is the
+    # historical default and is kept so earlier systems rebuild identically.
+    # "dodecahedron" (rhombic) encloses the same minimum-image distance in ~71% of
+    # the volume, and "octahedron" (truncated) in ~77%, so either cuts the water
+    # count with no loss of separation -- worth it for any solute, and materially so
+    # for an elongated one. Both stay isotropic in the minimum-image sense, so a
+    # solute that tumbles cannot come to interact with its own image, which is the
+    # failure mode of hand-fitting a rectangular box to a rod.
+    box_shape: str = "cube"  # cube | dodecahedron | octahedron
     ionic_strength: float = 0.15  # molar
     neutralize: bool = True
     ph: float = 7.0

@@ -52,7 +52,15 @@ def get_platform(requested: str = "auto") -> mm.Platform:
         if p is None:
             raise RuntimeError(f"requested platform {requested!r} is not available")
         return p
-    for name in ("OpenCL", "CPU", "Reference"):
+    # CUDA first: on a GPU host it is by far the fastest, and it was previously
+    # absent from this list entirely -- so `--platform auto` silently ran on CPU
+    # even where a GPU existed. Measured on an A10G for the dethread3 system
+    # (21,225 atoms, WT-MetaD via PLUMED): 0.570 ms/step vs 27.874 on this
+    # 8-thread CPU box, a 49x speedup, with PLUMED's own round trip costing only
+    # ~20% of step time because the CV is light. _try_platform() still probes by
+    # building a real context, so a machine without a driver falls through to
+    # OpenCL/CPU exactly as before.
+    for name in ("CUDA", "OpenCL", "CPU", "Reference"):
         p = _try_platform(name)
         if p is not None:
             return p
@@ -95,8 +103,11 @@ def _build_with_fallback(topology, system, cfg: Config, platform_name: str):
     try:
         return _new_sim(topology, system, cfg, platform_name), platform_name
     except Exception as e:
-        if platform_name == "OpenCL" and cfg.platform == "auto":
-            print(f"[run] OpenCL failed on the real system ({str(e)[:70]}); falling back to CPU")
+        # CUDA gets the same treatment as OpenCL: the 1-particle probe can pass
+        # while a real PME system fails (out of device memory, driver/runtime
+        # mismatch). Falling back keeps an auto run alive rather than aborting.
+        if platform_name in ("CUDA", "OpenCL") and cfg.platform == "auto":
+            print(f"[run] {platform_name} failed on the real system ({str(e)[:70]}); falling back to CPU")
             return _new_sim(topology, system, cfg, "CPU"), "CPU"
         raise
 

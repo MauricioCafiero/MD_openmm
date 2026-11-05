@@ -25,14 +25,9 @@ outputs/*
 *.csv
 !**/requirements.csv
 
-# --- rotaxane generated artifacts (regenerate from rotaxanes/*.py) ---
-rotaxanes/outputs/
-rotaxanes/metad/metad_run/
-rotaxanes/*.sdf
-rotaxanes/metad/plumed.dat
-rotaxanes/metad/HILLS
-rotaxanes/metad/COLVAR
-rotaxanes/metad/*.log
+# --- rotaxane work: kept in its own private repo
+# (github.com/MauricioCafiero/rotaxanes-results) -- this repo stays general. ---
+rotaxanes/
 
 # --- MM/GBSA scratch (antechamber + MMPBSA.py write these to cwd) ---
 ANTECHAMBER_*.AC*

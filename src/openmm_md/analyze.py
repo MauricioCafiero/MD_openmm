@@ -11,9 +11,14 @@ import matplotlib
 matplotlib.use("Agg")  # headless
 import matplotlib.pyplot as plt
 
+from .organic_solvent import SOLVENTS
+
 # Residue names mdtraj/OpenMM give to common ions (from amber14/tip3p.xml). The
 # solute-only wrapped trajectory drops these along with water.
 _ION_RESNAMES = {"NA", "CL", "K", "MG", "CA", "ZN", "FE", "CU", "MN", "BR", "F", "I", "LI", "RB", "CS", "SR", "BA"}
+# Organic-solvent residues (--solvent acetone|dmso): solvent, not solute, so the
+# wrapped trajectory and the single-molecule RMSD/Rg exclude them like water.
+_SOLVENT_RESNAMES = {resname for _, resname, _, _ in SOLVENTS.values()}
 
 
 def _solute_selection(top):
@@ -24,7 +29,7 @@ def _solute_selection(top):
     keep = []
     for r in top.residues:
         is_water = r.name in ("HOH", "WAT", "TIP3", "SOL")
-        if is_water or r.name in _ION_RESNAMES:
+        if is_water or r.name in _ION_RESNAMES or r.name in _SOLVENT_RESNAMES:
             continue
         # standard amino acids (protein) and any non-water/non-ion residue
         # (ligand LIG, cofactor A3P, ...) all stay.

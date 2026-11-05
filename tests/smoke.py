@@ -6,6 +6,7 @@ or with pytest if installed.
 Always runs:
   * ligand generation from SMILES (ethanol) -> SDF
   * platform probing (auto)
+  * single molecule in water and in DMSO (build -> short MD -> analyze)
 
 Runs the full prep-protein -> build -> run -> analyze pipeline only when the
 user provides real inputs via env vars:
@@ -152,6 +153,64 @@ def test_single_molecule():
         cols = next(csv.reader(f))
     assert "solute_rmsd_nm" in cols and "solute_rg_nm" in cols, cols
     print(f"  [ok] single_molecule (artifacts in {d})")
+
+
+def test_single_molecule_organic():
+    """Same path as test_single_molecule, but in DMSO (--solvent dmso).
+
+    Always runs: builds phenol from SMILES, packs DMSO around it with packmol
+    (organic_solvent.py), runs a short NVT MD, and analyzes. Checks the box holds
+    DMSO and no water, that analysis treats DMSO as solvent (the wrapped
+    trajectory is phenol only), and that a non-cube box shape is refused.
+    """
+    from openmm_md.config import Config
+    from openmm_md.build_system import build_mol_system
+    from openmm_md.dynamics import run as run_dynamics
+    from openmm_md.analyze import analyze
+    from openmm import app
+
+    cfg = Config()
+    cfg.solvent = "dmso"
+    cfg.equilibrate_steps = 100
+    cfg.production_steps = 200
+    cfg.report_interval = 20
+    cfg.traj_interval = 20
+    cfg.checkpoint_interval = 100
+    cfg.padding = 1.2  # 24 A cube: > 2 * nonbonded_cutoff
+    cfg.pressure = 0.0  # NVT, as in test_single_molecule (small box)
+    cfg.platform = "CPU"
+
+    d = Path(os.environ.get("OMD_MOL_ORG_OUT_DIR", "outputs/smoke_mol_dmso"))
+    if d.exists():
+        import shutil
+        shutil.rmtree(d)
+    d.mkdir(parents=True, exist_ok=True)
+
+    lig = d / "lig.sdf"
+    from openmm_md.prepare_ligand import smiles_to_sdf
+    smiles_to_sdf("c1ccccc1O", lig, num_confs=3)  # phenol
+
+    cfg_bad = Config()
+    cfg_bad.solvent, cfg_bad.box_shape, cfg_bad.padding = "dmso", "dodecahedron", 1.2
+    try:
+        build_mol_system(lig, d / "bad_shape", cfg=cfg_bad)
+        raise AssertionError("non-cube box with an organic solvent should be refused")
+    except ValueError as e:
+        assert "cube" in str(e), e
+
+    sys_xml, top = build_mol_system(lig, d, cfg=cfg)
+    assert sys_xml.exists() and top.exists()
+    resnames = [r.name for r in app.PDBFile(str(top)).topology.residues()]
+    assert resnames.count("DMS") > 50, f"expected a DMSO box, got {resnames.count('DMS')} DMS"
+    assert not any(r in ("HOH", "WAT") for r in resnames), "organic box must contain no water"
+
+    traj = run_dynamics(sys_xml, top, d, cfg=cfg, steps=cfg.production_steps)
+    assert traj.exists()
+    png = analyze(traj, top, d)
+    assert png.exists()
+    n_wrapped = sum(1 for l in open(d / "traj_wrapped.pdb") if l.startswith(("ATOM", "HETATM")))
+    assert n_wrapped == 13, f"wrapped trajectory should be phenol only (13 atoms), got {n_wrapped}"
+    print(f"  [ok] single_molecule_organic (artifacts in {d})")
 
 
 def test_auto_cofactors():
@@ -341,6 +400,7 @@ def test_zinc_finger_md():
 
 def main():
     for fn in (test_ligand_from_smiles, test_platform_probe, test_single_molecule,
+               test_single_molecule_organic,
                test_auto_cofactors, test_structural_metal, test_zinc_finger_md,
                test_full_pipeline):
         print(f"running {fn.__name__} ...")

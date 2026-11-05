@@ -1,0 +1,2 @@
+rod: COC(=O)c1cc(CNC(=O)c2ccc(C(=O)NCc3cc(C(F)(F)F)cc(C(F)(F)F)c3)cc2)cc(C(=O)OC)c1
+wheel: c1ccc2c(c1)OCCOCCOCCOc1ccccc1OCCOCCOCCO2

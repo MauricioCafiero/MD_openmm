@@ -58,6 +58,12 @@ def main(argv=None):
     p.add_argument("--out-dir", type=Path, default=Path("outputs"))
     p.add_argument("--site", type=_site, help="place ligand centroid at 'x y z' (angstrom)")
     p.add_argument("--padding", type=float, default=Config().padding)
+    p.add_argument("--box-shape", choices=("cube", "dodecahedron", "octahedron"),
+                   default=Config().box_shape,
+                   help="periodic box shape (default cube). dodecahedron holds the same "
+                        "minimum-image distance in ~71%% of the volume and octahedron in ~77%%, "
+                        "so either needs fewer waters -- a large saving for an elongated solute. "
+                        "Both stay isotropic, so a tumbling solute cannot meet its own image")
     p.add_argument(
         "--cofactor", action="append", default=[], metavar="RES[:SMILES]",
         help="force-keep a bound cofactor resname + parameterize with GAFF2: a built-in "
@@ -161,6 +167,7 @@ def main(argv=None):
 
     elif args.cmd == "build":
         cfg.padding = args.padding
+        cfg.box_shape = args.box_shape
         cfg.auto_cofactors = not args.no_auto_cofactors
         cfg.keep_metals = not args.no_keep_metals
         cofactors = {}
@@ -184,7 +191,13 @@ def main(argv=None):
             lig = args.out_dir / "ligand.sdf"
             smiles_to_sdf(args.smiles, lig, num_confs=args.num_confs)
             if args.site is not None:
-                from .prepare_ligand import load_ligand_rdkit, translate_to, write_sdf
+                # `load_ligand_rdkit` and `write_sdf` are already imported at module scope (line 21).
+                # Re-importing them *here* made them function-locals for the whole of main(), which
+                # retro-broke every earlier use: `prep-ligand --sdf` and `prep-ligand --smiles --site`
+                # both raised UnboundLocalError at lines 148/153 before this line ever ran. Only
+                # `translate_to` needs importing, and only because it is not at module scope.
+                # from .prepare_ligand import load_ligand_rdkit, translate_to, write_sdf
+                from .prepare_ligand import translate_to
                 m = load_ligand_rdkit(lig); translate_to(m, args.site); write_sdf(m, lig)
         elif args.ligand:
             cfg.padding = args.padding

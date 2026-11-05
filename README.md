@@ -323,6 +323,21 @@ pressure noise lets the barostat overshoot. At the **default `padding=1.5`** the
 ~3.2 nm and NPT is stable (settles to ~0.99 g/mL). Use the default padding for NPT
 single-molecule runs; only drop to padding 1.0 with `pressure<=0` (NVT) for tiny checks.
 
+### Organic solvent (acetone, DMSO)
+
+```sh
+# --solvent works on build, build-mol and build-multimol (default: water).
+# Cubic box only; GAFF2/AM1-BCC solvent packed with packmol; no ions.
+omd build-mol --smiles "c1ccccc1O" --solvent dmso --padding 1.2 --out-dir work_dmso
+# the packed box is ~5% under density (Config.solvent_fill = 0.95): equilibrate
+# under NPT and check the Density column of energy.csv before production
+omd run --system work_dmso/system.xml --topology work_dmso/complex.pdb \
+        --steps 100000 --out-dir work_dmso/equil
+```
+
+Solvents are defined in `organic_solvent.SOLVENTS` (SMILES, residue name,
+experimental density, molar mass); add an entry to support another one.
+
 ---
 
 ## Artifacts
@@ -621,6 +636,7 @@ openmm/
 │   ├── prepare_protein.py   #   PDBFixer pipeline
 │   ├── prepare_ligand.py    #   SMILES->conformers->MMFF->SDF, SDF passthrough, centroid placement
 │   ├── build_system.py      #   build_system (complex) + build_mol_system (single) + build_multimol_system (N fragments)
+│   ├── organic_solvent.py   #   packmol boxes of acetone/DMSO (--solvent), GAFF2-typed solvent
 │   ├── dynamics.py          #   platform probing, hybrid equil/produce, minimize, reporters
 │   ├── analyze.py           #   mdtraj RMSD/RMSF/Rg + energy plots + wrapped trajectory
 │   ├── mmgbsa.py            #   MM/GBSA binding energy (ParmEd prmtop + MMPBSA.py)

@@ -41,6 +41,7 @@ from openmmforcefields.generators import GAFFTemplateGenerator
 from .config import Config
 from .prepare_ligand import load_ligand_rdkit, translate_to
 from .dynamics import PROTEIN_RES
+from .organic_solvent import pack_organic_solvent
 
 CONSTRAINTS = {
     "None": None,
@@ -481,14 +482,25 @@ def _solvate_and_create(
             if rm:
                 modeller.delete(rm)
                 print(f"[build] deprotonated {len(rm)} coordinating CYS -> CYM (thiolate)")
-    modeller.addSolvent(
-        ff,
-        model=cfg.water_model,
-        padding=cfg.padding * unit.nanometer,
-        boxShape=cfg.box_shape,
-        ionicStrength=cfg.ionic_strength * unit.molar,
-        neutralize=cfg.neutralize,
-    )
+    n_solv = 0
+    if cfg.solvent == "water":
+        modeller.addSolvent(
+            ff,
+            model=cfg.water_model,
+            padding=cfg.padding * unit.nanometer,
+            boxShape=cfg.box_shape,
+            ionicStrength=cfg.ionic_strength * unit.molar,
+            neutralize=cfg.neutralize,
+        )
+    else:
+        # Organic solvent: packmol instead of addSolvent (water models only); the
+        # solvent molecule is GAFF-typed like the solutes. No ions are added.
+        modeller, s_offmol, n_solv = pack_organic_solvent(modeller, cfg.solvent, cfg, out_dir)
+        if gaff_offmols:
+            gaff.add_molecules([s_offmol])
+        else:
+            gaff = GAFFTemplateGenerator(molecules=[s_offmol], forcefield=cfg.ligand_ff)
+            ff.registerTemplateGenerator(gaff.generator)
 
     system = ff.createSystem(
         modeller.topology,
@@ -508,9 +520,20 @@ def _solvate_and_create(
         (out_dir / "ligand.smi").write_text(ligand_smiles + "\n")
 
     n = system.getNumParticles()
-    n_wat = sum(1 for r in modeller.topology.residues() if r.name in ("HOH", "WAT"))
-    print(f"[build] {n} particles, {n_wat} waters -> {out_dir/'system.xml'}, "
-          f"{out_dir/'complex.pdb'}")
+    if cfg.solvent == "water":
+        n_wat = sum(1 for r in modeller.topology.residues() if r.name in ("HOH", "WAT"))
+        print(f"[build] {n} particles, {n_wat} waters -> {out_dir/'system.xml'}, "
+              f"{out_dir/'complex.pdb'}")
+    else:
+        nb = next(f for f in system.getForces() if f.__class__.__name__ == "NonbondedForce")
+        q = sum(nb.getParticleParameters(i)[0].value_in_unit(unit.elementary_charge)
+                for i in range(n))
+        if abs(q) > 1e-3:
+            print(f"[build] WARNING: net charge {q:+.2f} e and no counter-ions in "
+                  f"{cfg.solvent} (PME uses a uniform neutralizing background)")
+        print(f"[build] {n} particles, {n_solv} {cfg.solvent} molecules (packed below "
+              f"density -- equilibrate under NPT before production) -> "
+              f"{out_dir/'system.xml'}, {out_dir/'complex.pdb'}")
     return out_dir / "system.xml", out_dir / "complex.pdb"
 
 
@@ -624,7 +647,7 @@ def build_mol_system(
     # Modeller from just the ligand topology; addSolvent will define the box.
     modeller = app.Modeller(lig_topology, lig_positions)
     print(f"[build-mol] solute {lig_offmol.to_smiles()} "
-          f"({lig_offmol.n_atoms} atoms) -> GAFF2, solvating with {cfg.water_model}")
+          f"({lig_offmol.n_atoms} atoms) -> GAFF2, solvating with {cfg.water_model if cfg.solvent == 'water' else cfg.solvent}")
     return _solvate_and_create(
         modeller, [lig_offmol], cfg, [cfg.water_ff],
         add_hydrogens=False, out_dir=out_dir, ligand_smiles=lig_offmol.to_smiles(),
@@ -700,7 +723,7 @@ def build_multimol_system(
         modeller.add(top, pos)
     print(f"[build-multimol] {len(offmols)} fragments, "
           f"{sum(o.n_atoms for o in offmols)} solute atoms -> GAFF2, "
-          f"solvating with {cfg.water_model}")
+          f"solvating with {cfg.water_model if cfg.solvent == 'water' else cfg.solvent}")
     return _solvate_and_create(
         modeller, offmols, cfg, [cfg.water_ff],
         add_hydrogens=False, out_dir=out_dir, ligand_smiles=None,

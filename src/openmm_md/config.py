@@ -31,6 +31,12 @@ class Config:
     # solute that tumbles cannot come to interact with its own image, which is the
     # failure mode of hand-fitting a rectangular box to a rod.
     box_shape: str = "cube"  # cube | dodecahedron | octahedron
+    # Solvent: "water" (Modeller.addSolvent with water_model + ions) or an organic
+    # solvent from organic_solvent.SOLVENTS ("acetone", "dmso"), packed with packmol
+    # into a cube (no ions). solvent_fill = fraction of the experimental-density
+    # molecule count packed; NPT equilibration restores the density.
+    solvent: str = "water"
+    solvent_fill: float = 0.95
     ionic_strength: float = 0.15  # molar
     neutralize: bool = True
     ph: float = 7.0

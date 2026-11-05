@@ -23,6 +23,7 @@ from .build_system import build_system, build_mol_system, build_multimol_system,
 from .dynamics import run as run_dynamics
 from .analyze import analyze
 from . import mmgbsa
+from .organic_solvent import SOLVENTS
 
 
 def _site(s):
@@ -32,6 +33,14 @@ def _site(s):
     if len(xyz) != 3:
         raise argparse.ArgumentTypeError("--site expects 3 numbers 'x y z' (angstrom)")
     return xyz
+
+
+def _add_solvent_arg(p):
+    p.add_argument("--solvent", choices=("water", *sorted(SOLVENTS)), default=Config().solvent,
+                   help="solvent (default water: TIP3P + 0.15 M NaCl). acetone/dmso are "
+                        "GAFF2-typed and packed with packmol into a cube, no ions; the "
+                        "packed box is below density -- equilibrate under NPT and check "
+                        "the density (energy.csv from `omd run`) before production")
 
 
 def main(argv=None):
@@ -81,6 +90,7 @@ def main(argv=None):
         help="drop all structural metal ions (Zn2+/Fe2+/...) instead of keeping bound "
              "metals locked in their crystal coordination site (bonded model).",
     )
+    _add_solvent_arg(p)
 
     p = sub.add_parser("build-mol", help="solvate a single small molecule (no protein)")
     p.add_argument("--ligand", type=Path, help="input ligand SDF (or use --smiles to build one)")
@@ -89,6 +99,7 @@ def main(argv=None):
     p.add_argument("--site", type=_site, help="place molecule centroid at 'x y z' (angstrom)")
     p.add_argument("--padding", type=float, default=Config().padding)
     p.add_argument("--num-confs", type=int, default=5)
+    _add_solvent_arg(p)
 
     p = sub.add_parser("build-multimol",
                        help="solvate N covalently-separate molecules (no protein); "
@@ -99,6 +110,7 @@ def main(argv=None):
     p.add_argument("--padding", type=float, default=Config().padding)
     p.add_argument("--resnames", nargs="+", default=None,
                    help="residue name per fragment (default ROD WHL for 2, else FRG0 FRG1..)")
+    _add_solvent_arg(p)
 
     p = sub.add_parser("run", help="minimize + equilibrate + production MD")
     p.add_argument("--system", type=Path, required=True)
@@ -166,6 +178,7 @@ def main(argv=None):
             parser.error("provide --smiles or --sdf")
 
     elif args.cmd == "build":
+        cfg.solvent = args.solvent
         cfg.padding = args.padding
         cfg.box_shape = args.box_shape
         cfg.auto_cofactors = not args.no_auto_cofactors
@@ -184,6 +197,7 @@ def main(argv=None):
                      site_xyz_ang=args.site)
 
     elif args.cmd == "build-mol":
+        cfg.solvent = args.solvent
         if args.smiles and args.ligand:
             parser.error("provide either --smiles or --ligand, not both")
         if args.smiles:
@@ -207,6 +221,7 @@ def main(argv=None):
         build_mol_system(lig, args.out_dir, cfg=cfg, site_xyz_ang=args.site)
 
     elif args.cmd == "build-multimol":
+        cfg.solvent = args.solvent
         cfg.padding = args.padding
         build_multimol_system(args.sdf, args.out_dir, cfg=cfg,
                              residue_names=args.resnames)

@@ -21,6 +21,7 @@ dependencies:
   - pandas
   - matplotlib
   - pubchempy      # resolve cofactor SMILES from PDB HETNAM names (auto-cofactor discovery)
+  - packmol        # organic-solvent boxes (--solvent acetone|dmso)
   - pip
   - pip:
       - -e .          # install this package (console script `omd`) without pulling PyPI deps
